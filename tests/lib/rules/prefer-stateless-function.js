@@ -9,7 +9,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/prefer-stateless-function');
 
 const parsers = require('../../helpers/parsers');
@@ -76,7 +76,7 @@ ruleTester.run('prefer-stateless-function', rule, {
       options: [{ ignorePureComponents: true }],
     },
     {
-      // Has a lifecyle method
+      // Has a lifecycle method
       code: `
         class Foo extends React.Component {
           shouldComponentUpdate() {
@@ -326,6 +326,88 @@ ruleTester.run('prefer-stateless-function', rule, {
         }
       `,
       options: [{ ignorePureComponents: true }],
+    },
+    {
+      code: `
+        import React, {PureComponent, PropTypes} from 'react'
+
+        export default function errorDecorator (options) {
+          return WrappedComponent => {
+            class Wrapper extends PureComponent {
+              static propTypes = {
+                error: PropTypes.string
+              }
+              render () {
+                const {error, ...props} = this.props
+                if (error) {
+                  return <div>Error! {error}</div>
+                } else {
+                  return <WrappedComponent {...props} />
+                }
+              }
+            }
+            return Wrapper
+          }
+        }
+      `,
+      features: ['class fields'],
+      options: [{ ignorePureComponents: true }],
+    },
+    {
+      code: `
+        import React, {PureComponent, PropTypes} from 'react'
+
+        export default function errorDecorator (options) {
+          return WrappedComponent =>
+            class Wrapper extends PureComponent {
+              static propTypes = {
+                error: PropTypes.string
+              }
+              render () {
+                const {error, ...props} = this.props
+                if (error) {
+                  return <div>Error! {error}</div>
+                } else {
+                  return <WrappedComponent {...props} />
+                }
+              }
+            }
+        }
+      `,
+      features: ['class fields'],
+      options: [{ ignorePureComponents: true }],
+    },
+    {
+      code: `
+        export default function errorDecorator (options) {
+          return WrappedComponent =>
+            class Wrapper extends React.PureComponent {
+              static propTypes = {
+                error: PropTypes.string
+              }
+              render () {
+                const {error, ...props} = this.props
+                if (error) {
+                  return <div>Error! {error}</div>
+                } else {
+                  return <WrappedComponent {...props} />
+                }
+              }
+            }
+        }
+      `,
+      features: ['class fields'],
+      options: [{ ignorePureComponents: true }],
+    },
+    {
+      code: `
+        /**
+         * @param a.
+         */
+        function Comp() {
+          return <a></a>
+        }
+      `,
     },
   ]),
 

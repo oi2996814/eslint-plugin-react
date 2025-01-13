@@ -11,7 +11,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/no-deprecated');
 
 const parsers = require('../../helpers/parsers');
@@ -48,9 +48,9 @@ ruleTester.run('no-deprecated', rule, {
     // Not deprecated
     'var element = React.createElement(\'p\', {}, null);',
     'var clone = React.cloneElement(element);',
-    'ReactDOM.render(element, container);',
-    'ReactDOM.unmountComponentAtNode(container);',
+    'ReactDOM.cloneElement(child, container);',
     'ReactDOM.findDOMNode(instance);',
+    'ReactDOM.createPortal(child, container);',
     'ReactDOMServer.renderToString(element);',
     'ReactDOMServer.renderToStaticMarkup(element);',
     {
@@ -117,6 +117,50 @@ ruleTester.run('no-deprecated', rule, {
         import React from "react";
 
         let { default: defaultReactExport, ...allReactExports } = React;
+      `,
+    },
+    // React < 18
+    {
+      code: `
+        import { render, hydrate } from 'react-dom';
+        import { renderToNodeStream } from 'react-dom/server';
+        ReactDOM.render(element, container);
+        ReactDOM.unmountComponentAtNode(container);
+        ReactDOMServer.renderToNodeStream(element);
+      `,
+      settings: { react: { version: '17.999.999' } },
+    },
+    // React 18 API
+    {
+      code: `
+        import ReactDOM, { createRoot } from 'react-dom/client';
+        ReactDOM.createRoot(container);
+        const root = createRoot(container);
+        root.unmount();
+      `,
+    },
+    {
+      code: `
+        import ReactDOM, { hydrateRoot } from 'react-dom/client';
+        ReactDOM.hydrateRoot(container, <App/>);
+        hydrateRoot(container, <App/>);
+      `,
+    },
+    {
+      code: `
+        import ReactDOMServer, { renderToPipeableStream } from 'react-dom/server';
+        ReactDOMServer.renderToPipeableStream(<App />, {});
+        renderToPipeableStream(<App />, {});
+      `,
+    },
+    {
+      code: `
+        import { renderToString } from 'react-dom/server';
+      `,
+    },
+    {
+      code: `
+        const { renderToString } = require('react-dom/server');
       `,
     },
   ]),
@@ -187,8 +231,20 @@ ruleTester.run('no-deprecated', rule, {
     {
       code: 'var {createClass, PropTypes} = require(\'react\');',
       errors: [
-        errorMessage('React.createClass', '15.5.0', 'the npm module create-react-class'),
-        errorMessage('React.PropTypes', '15.5.0', 'the npm module prop-types'),
+        errorMessage(
+          'React.createClass',
+          '15.5.0',
+          'the npm module create-react-class',
+          null,
+          { type: 'Property', column: 6 }
+        ),
+        errorMessage(
+          'React.PropTypes',
+          '15.5.0',
+          'the npm module prop-types',
+          null,
+          { type: 'Property', column: 19 }
+        ),
       ],
     },
     {
@@ -208,8 +264,20 @@ ruleTester.run('no-deprecated', rule, {
       const {createClass, PropTypes} = React;
     `,
       errors: [
-        errorMessage('React.createClass', '15.5.0', 'the npm module create-react-class'),
-        errorMessage('React.PropTypes', '15.5.0', 'the npm module prop-types'),
+        errorMessage(
+          'React.createClass',
+          '15.5.0',
+          'the npm module create-react-class',
+          null,
+          { type: 'Property', line: 3, column: 14 }
+        ),
+        errorMessage(
+          'React.PropTypes',
+          '15.5.0',
+          'the npm module prop-types',
+          null,
+          { type: 'Property', line: 3, column: 27 }
+        ),
       ],
     },
     {
@@ -451,6 +519,94 @@ ruleTester.run('no-deprecated', rule, {
           'UNSAFE_componentWillUpdate',
           'https://reactjs.org/docs/react-component.html#unsafe_componentwillupdate. Use https://github.com/reactjs/react-codemod#rename-unsafe-lifecycles to automatically update your components.',
           { type: 'Identifier', line: 6, column: 11 }
+        ),
+      ],
+    },
+    {
+      code: `
+        import { render } from 'react-dom';
+        ReactDOM.render(<div></div>, container);
+      `,
+      errors: [
+        errorMessage(
+          'ReactDOM.render',
+          '18.0.0',
+          'createRoot',
+          'https://reactjs.org/link/switch-to-createroot',
+          { type: 'ImportSpecifier', line: 2, column: 18 }
+        ),
+        errorMessage(
+          'ReactDOM.render',
+          '18.0.0',
+          'createRoot',
+          'https://reactjs.org/link/switch-to-createroot',
+          { type: 'MemberExpression', line: 3, column: 9 }
+        ),
+      ],
+    },
+    {
+      code: `
+        import { hydrate } from 'react-dom';
+        ReactDOM.hydrate(<div></div>, container);
+      `,
+      errors: [
+        errorMessage(
+          'ReactDOM.hydrate',
+          '18.0.0',
+          'hydrateRoot',
+          'https://reactjs.org/link/switch-to-createroot',
+          { type: 'ImportSpecifier', line: 2, column: 18 }
+        ),
+        errorMessage(
+          'ReactDOM.hydrate',
+          '18.0.0',
+          'hydrateRoot',
+          'https://reactjs.org/link/switch-to-createroot',
+          { type: 'MemberExpression', line: 3, column: 9 }
+        ),
+      ],
+    },
+    {
+      code: `
+        import { unmountComponentAtNode } from 'react-dom';
+        ReactDOM.unmountComponentAtNode(container);
+      `,
+      errors: [
+        errorMessage(
+          'ReactDOM.unmountComponentAtNode',
+          '18.0.0',
+          'root.unmount',
+          'https://reactjs.org/link/switch-to-createroot',
+          { type: 'ImportSpecifier', line: 2, column: 18 }
+        ),
+        errorMessage(
+          'ReactDOM.unmountComponentAtNode',
+          '18.0.0',
+          'root.unmount',
+          'https://reactjs.org/link/switch-to-createroot',
+          { type: 'MemberExpression', line: 3, column: 9 }
+        ),
+      ],
+    },
+    {
+      code: `
+        import { renderToNodeStream } from 'react-dom/server';
+        ReactDOMServer.renderToNodeStream(element);
+      `,
+      errors: [
+        errorMessage(
+          'ReactDOMServer.renderToNodeStream',
+          '18.0.0',
+          'renderToPipeableStream',
+          'https://reactjs.org/docs/react-dom-server.html#rendertonodestream',
+          { type: 'ImportSpecifier', line: 2, column: 18 }
+        ),
+        errorMessage(
+          'ReactDOMServer.renderToNodeStream',
+          '18.0.0',
+          'renderToPipeableStream',
+          'https://reactjs.org/docs/react-dom-server.html#rendertonodestream',
+          { type: 'MemberExpression', line: 3, column: 9 }
         ),
       ],
     },

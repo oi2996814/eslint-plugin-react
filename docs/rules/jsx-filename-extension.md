@@ -1,4 +1,6 @@
-# Restrict file extensions that may contain JSX (react/jsx-filename-extension)
+# Disallow file extensions that may contain JSX (`react/jsx-filename-extension`)
+
+<!-- end auto-generated rule header -->
 
 ## Rule Details
 
@@ -41,6 +43,16 @@ The set of allowed extensions is configurable. By default '.jsx' is allowed. If 
 ```js
 "rules": {
   "react/jsx-filename-extension": [1, { "extensions": [".js", ".jsx"] }]
+}
+```
+
+### `ignoreFilesWithoutCode` (default: `false`)
+
+If enabled, files that do not contain code (i.e. are empty, contain only whitespaces or comments) will not be rejected.
+
+```js
+"rules": {
+  "react/jsx-filename-extension": [1, { "ignoreFilesWithoutCode": true }]
 }
 ```
 

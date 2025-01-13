@@ -20,12 +20,22 @@ const parseCode = (code) => {
   return ASTnode.body[0];
 };
 
-const mockContext = {};
+const mockContext = {
+  getSourceCode() { return { getScope: mockContext.getScope }; },
+  getScope() {
+    return {
+      type: 'global',
+      upper: null,
+      childScopes: [],
+      variables: [],
+    };
+  },
+};
 
 describe('jsxUtil', () => {
   describe('isReturningJSX', () => {
     const assertValid = (codeStr) => assert(
-      isReturningJSX(() => false, parseCode(codeStr), mockContext)
+      isReturningJSX(mockContext, parseCode(codeStr))
     );
 
     it('Works when returning JSX', () => {

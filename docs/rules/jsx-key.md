@@ -1,4 +1,8 @@
-# Detect missing `key` prop (react/jsx-key)
+# Disallow missing `key` props in iterators/collection literals (`react/jsx-key`)
+
+💼 This rule is enabled in the ☑️ `recommended` [config](https://github.com/jsx-eslint/eslint-plugin-react/#shareable-configs).
+
+<!-- end auto-generated rule header -->
 
 Warn if an element that likely requires a `key` prop--namely, one present in an
 array literal or an arrow function expression.
@@ -9,9 +13,17 @@ Examples of **incorrect** code for this rule:
 
 ```jsx
 [<Hello />, <Hello />, <Hello />];
+```
 
+```jsx
 data.map(x => <Hello>{x}</Hello>);
+```
 
+```jsx
+Array.from([1, 2, 3], (x) => <Hello>{x}</Hello>);
+```
+
+```jsx
 <Hello {...{ key: id, id, caption }} />
 ```
 
@@ -21,9 +33,17 @@ Examples of **correct** code for this rule:
 
 ```jsx
 [<Hello key="first" />, <Hello key="second" />, <Hello key="third" />];
+```
 
-data.map((x, i) => <Hello key={i}>{x}</Hello>);
+```jsx
+data.map((x) => <Hello key={x.id}>{x}</Hello>);
+```
 
+```jsx
+Array.from([1, 2, 3], (x) => <Hello key={x}>{x}</Hello>);
+```
+
+```jsx
 <Hello key={id} {...{ id, caption }} />
 ```
 
@@ -43,7 +63,9 @@ Examples of **incorrect** code for this rule:
 
 ```jsx
 [<></>, <></>, <></>];
+```
 
+```jsx
 data.map(x => <>{x}</>);
 ```
 
@@ -55,6 +77,19 @@ Examples of **incorrect** code for this rule:
 
 ```jsx
 <span {...spread} key={"key-after-spread"} />;
+```
+
+### `warnOnDuplicates` (default: `false`)
+
+When `true` the rule will check for any duplicate key prop values.
+
+Examples of **incorrect** code for this rule:
+
+```jsx
+const spans = [
+    <span key="notunique"/>,
+    <span key="notunique"/>,
+];
 ```
 
 ## When Not To Use It

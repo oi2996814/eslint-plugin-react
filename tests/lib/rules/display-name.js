@@ -9,7 +9,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/display-name');
 
 const parsers = require('../../helpers/parsers');
@@ -371,39 +371,6 @@ ruleTester.run('display-name', rule, {
     },
     {
       code: `
-        import React, {createElement} from "react";
-        const SomeComponent = (props) => {
-          const {foo, bar} = props;
-          return someComponentFactory({
-            onClick: () => foo(bar("x"))
-          });
-        };
-      `,
-    },
-    {
-      code: `
-        import React, {Component} from "react";
-        function someDecorator(ComposedComponent) {
-          return class MyDecorator extends Component {
-            render() {return <ComposedComponent {...this.props} />;}
-          };
-        }
-        module.exports = someDecorator;
-      `,
-    },
-    {
-      code: `
-        import React, {Component} from "react";
-        function someDecorator(ComposedComponent) {
-          return class MyDecorator extends Component {
-            render() {return <ComposedComponent {...this.props} />;}
-          };
-        }
-        module.exports = someDecorator;
-      `,
-    },
-    {
-      code: `
         const element = (
           <Media query={query} render={() => {
             renderWasCalled = true
@@ -534,6 +501,349 @@ ruleTester.run('display-name', rule, {
         Comp.displayName = 'MyCompNameAs';
       `,
       features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        function Test() {
+          const data = [
+            {
+              name: 'Bob',
+            },
+          ];
+
+          const columns = [
+            {
+              Header: 'Name',
+              accessor: 'name',
+              Cell: ({ value }) => <div>{value}</div>,
+            },
+          ];
+
+          return <ReactTable columns={columns} data={data} />;
+        }
+      `,
+    },
+    {
+      // issue #3300
+      code: `
+        const f = (a) => () => {
+          if (a) {
+            return null;
+          }
+          return 1;
+        };
+      `,
+    },
+    {
+      code: `
+        class Test {
+          render() {
+            const data = [
+              {
+                name: 'Bob',
+              },
+            ];
+
+            const columns = [
+              {
+                Header: 'Name',
+                accessor: 'name',
+                Cell: ({ value }) => <div>{value}</div>,
+              },
+            ];
+
+            return <ReactTable columns={columns} data={data} />;
+          }
+        }
+      `,
+    },
+    {
+      // issue #3289
+      code: `
+        export const demo = (a) => (b) => {
+          if (a == null) return null;
+          return b;
+        }
+      `,
+    },
+    {
+      // issue #3329
+      code: `
+        let demo = null;
+        demo = (a) => {
+          if (a == null) return null;
+          return f(a);
+        };`,
+    },
+    {
+      // issue #3334
+      code: `
+        obj._property = (a) => {
+          if (a == null) return null;
+          return f(a);
+        };
+      `,
+    },
+    {
+      // issue #3334
+      code: `
+        _variable = (a) => {
+          if (a == null) return null;
+          return f(a);
+        };
+      `,
+    },
+    {
+      // issue #3346
+      code: `
+        demo = () => () => null;
+      `,
+    },
+    {
+      // issue #3346
+      code: `
+        demo = {
+          property: () => () => null
+        }
+      `,
+    },
+    {
+      // issue #3346
+      code: `
+        demo = function() {return function() {return null;};};
+      `,
+    },
+    {
+      // issue #3346
+      code: `
+        demo = {
+          property: function() {return function() {return null;};}
+        }
+      `,
+    },
+    {
+      // issue #3303
+      code: `
+        function MyComponent(props) {
+          return <b>{props.name}</b>;
+        }
+
+        const MemoizedMyComponent = React.memo(
+          MyComponent,
+          (prevProps, nextProps) => prevProps.name === nextProps.name
+        )
+      `,
+    },
+    {
+      // Nested React.forwardRef should be accepted in React versions in the following range:
+      // ^0.14.10 || ^15.7.0 || >= 16.12.0
+      code: `
+        import React from 'react'
+
+        const MemoizedForwardRefComponentLike = React.memo(
+          React.forwardRef(function({ world }, ref) {
+            return <div ref={ref}>Hello {world}</div>
+        })
+        )
+      `,
+      settings: {
+        react: {
+          version: '16.14.0',
+        },
+      },
+    },
+    {
+      // Nested React.forwardRef should be accepted in React versions in the following range:
+      // ^0.14.10 || ^15.7.0 || >= 16.12.0
+      code: `
+        import React from 'react'
+
+        const MemoizedForwardRefComponentLike = React.memo(
+          React.forwardRef(({ world }, ref) => {
+            return <div ref={ref}>Hello {world}</div>
+          })
+        )
+      `,
+      settings: {
+        react: {
+          version: '15.7.0',
+        },
+      },
+    },
+    {
+      // Nested React.forwardRef should be accepted in React versions in the following range:
+      // ^0.14.10 || ^15.7.0 || >= 16.12.0
+      code: `
+        import React from 'react'
+
+        const MemoizedForwardRefComponentLike = React.memo(
+          React.forwardRef(function ComponentLike({ world }, ref) {
+            return <div ref={ref}>Hello {world}</div>
+          })
+        )
+      `,
+      settings: {
+        react: {
+          version: '16.12.1',
+        },
+      },
+    },
+    {
+      // Nested React.forwardRef should be accepted in React versions in the following range:
+      // ^0.14.10 || ^15.7.0 || >= 16.12.0
+      code: `
+        export const ComponentWithForwardRef = React.memo(
+          React.forwardRef(function Component({ world }) {
+            return <div>Hello {world}</div>
+          })
+        )
+      `,
+      settings: {
+        react: {
+          version: '0.14.11',
+        },
+      },
+    },
+    {
+      // Nested React.forwardRef should be accepted in React versions in the following range:
+      // ^0.14.10 || ^15.7.0 || >= 16.12.0
+      code: `
+        import React from 'react'
+
+        const MemoizedForwardRefComponentLike = React.memo(
+          React.forwardRef(function({ world }, ref) {
+            return <div ref={ref}>Hello {world}</div>
+          })
+        )
+      `,
+      settings: {
+        react: {
+          version: '15.7.1',
+        },
+      },
+    },
+    {
+      code: `
+        import React from 'react';
+
+        const Hello = React.createContext();
+        Hello.displayName = "HelloContext"
+      `,
+      options: [{ checkContextObjects: true }],
+    },
+    {
+      code: `
+        import { createContext } from 'react';
+
+        const Hello = createContext();
+        Hello.displayName = "HelloContext"
+      `,
+      options: [{ checkContextObjects: true }],
+    },
+    {
+      code: `
+        import { createContext } from 'react';
+
+        const Hello = createContext();
+
+        const obj = {};
+        obj.displayName = "False positive";
+
+        Hello.displayName = "HelloContext"
+      `,
+      options: [{ checkContextObjects: true }],
+    },
+    {
+      code: `
+        import * as React from 'react';
+
+        const Hello = React.createContext();
+
+        const obj = {};
+        obj.displayName = "False positive";
+
+        Hello.displayName = "HelloContext";
+      `,
+      options: [{ checkContextObjects: true }],
+    },
+    {
+      code: `
+        const obj = {};
+        obj.displayName = "False positive";
+      `,
+      options: [{ checkContextObjects: true }],
+    },
+    // React.createContext should be accepted in React versions in the following range:
+    // >= 16.13.0
+    {
+      code: `
+        import { createContext } from 'react';
+
+        const Hello = createContext();
+      `,
+      settings: {
+        react: {
+          version: '16.2.0',
+        },
+      },
+      options: [{ checkContextObjects: true }],
+    },
+    {
+      code: `
+        import { createContext } from 'react';
+
+        const Hello = createContext();
+        Hello.displayName = "HelloContext";
+      `,
+      settings: {
+        react: {
+          version: '>16.3.0',
+        },
+      },
+      options: [{ checkContextObjects: true }],
+    },
+    {
+      code: `
+        import { createContext } from 'react';
+
+        let Hello;
+        Hello = createContext();
+        Hello.displayName = "HelloContext";
+      `,
+      options: [{ checkContextObjects: true }],
+    },
+    {
+      code: `
+        import { createContext } from 'react';
+
+        const Hello = createContext();
+      `,
+      settings: {
+        react: {
+          version: '>16.3.0',
+        },
+      },
+      options: [{ checkContextObjects: false }],
+    },
+    {
+      code: `
+        import { createContext } from 'react';
+
+        var Hello;
+        Hello = createContext();
+        Hello.displayName = "HelloContext";
+      `,
+      options: [{ checkContextObjects: true }],
+    },
+    {
+      code: `
+        import { createContext } from 'react';
+
+        var Hello;
+        Hello = React.createContext();
+        Hello.displayName = "HelloContext";
+      `,
+      options: [{ checkContextObjects: true }],
     },
   ]),
 
@@ -757,7 +1067,9 @@ ruleTester.run('display-name', rule, {
       errors: [{ messageId: 'noDisplayName' }],
     },
     {
-    // Only trigger an error for the outer React.memo
+    // Only trigger an error for the outer React.memo,
+    // if the React version is not in the following range:
+    // ^0.14.10 || ^15.7.0 || >= 16.12.0
       code: `
         import React from 'react'
 
@@ -771,19 +1083,31 @@ ruleTester.run('display-name', rule, {
         {
           messageId: 'noDisplayName',
         }],
+      settings: {
+        react: {
+          version: '15.6.0',
+        },
+      },
     },
     {
-    // Only trigger an error for the outer React.memo
+    // Only trigger an error for the outer React.memo,
+    // if the React version is not in the following range:
+    // ^0.14.10 || ^15.7.0 || >= ^16.12.0
       code: `
         import React from 'react'
 
         const MemoizedForwardRefComponentLike = React.memo(
           React.forwardRef(function({ world }, ref) {
             return <div ref={ref}>Hello {world}</div>
-        })
+          })
         )
       `,
       errors: [{ messageId: 'noDisplayName' }],
+      settings: {
+        react: {
+          version: '0.14.2',
+        },
+      },
     },
     {
     // React does not handle the result of forwardRef being passed into memo
@@ -799,6 +1123,11 @@ ruleTester.run('display-name', rule, {
         )
       `,
       errors: [{ messageId: 'noDisplayName' }],
+      settings: {
+        react: {
+          version: '15.0.1',
+        },
+      },
     },
     {
       code: `
@@ -922,11 +1251,11 @@ ruleTester.run('display-name', rule, {
           const data = processData({ value: 'data' });
           return <div>{data}</div>;
         });
-        
+
         export const Component2 = observer(() => {
           const data = processData();
           return <div>{data}</div>;
-        });      
+        });
       `,
       features: ['optional chaining', 'types'],
       settings: { componentWrapperFunctions: ['observer'] },
@@ -940,6 +1269,78 @@ ruleTester.run('display-name', rule, {
           line: 9,
         },
       ],
+    },
+    {
+      code: `
+        import React from 'react';
+
+        const Hello = React.createContext();
+      `,
+      errors: [
+        {
+          messageId: 'noContextDisplayName',
+          line: 4,
+        },
+      ],
+      options: [{ checkContextObjects: true }],
+    },
+    {
+      code: `
+        import * as React from 'react';
+
+        const Hello = React.createContext();
+      `,
+      errors: [
+        {
+          messageId: 'noContextDisplayName',
+          line: 4,
+        },
+      ],
+      options: [{ checkContextObjects: true }],
+    },
+    {
+      code: `
+        import { createContext } from 'react';
+
+        const Hello = createContext();
+      `,
+      errors: [
+        {
+          messageId: 'noContextDisplayName',
+          line: 4,
+        },
+      ],
+      options: [{ checkContextObjects: true }],
+    },
+    {
+      code: `
+        import { createContext } from 'react';
+
+        var Hello;
+        Hello = createContext();
+      `,
+      errors: [
+        {
+          messageId: 'noContextDisplayName',
+          line: 5,
+        },
+      ],
+      options: [{ checkContextObjects: true }],
+    },
+    {
+      code: `
+        import { createContext } from 'react';
+
+        var Hello;
+        Hello = React.createContext();
+      `,
+      errors: [
+        {
+          messageId: 'noContextDisplayName',
+          line: 5,
+        },
+      ],
+      options: [{ checkContextObjects: true }],
     },
   ]),
 });

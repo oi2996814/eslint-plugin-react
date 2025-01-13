@@ -9,7 +9,9 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const semver = require('semver');
+const eslintVersion = require('eslint/package.json').version;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/jsx-indent');
 
 const parsers = require('../../helpers/parsers');
@@ -1094,9 +1096,142 @@ const Component = () => (
         }
       `,
     },
+    {
+      code: `
+        function App() {
+          return (
+            <App />
+          );
+        }
+      `,
+      options: [2],
+      parserOptions,
+    },
+    {
+      code: `
+        function App() {
+          return <App>
+            <Foo />
+          </App>;
+        }
+      `,
+      options: [2],
+      parserOptions,
+    },
+    {
+      code: `
+        const myFunction = () => (
+          [
+            <Tag
+              {...properties}
+            />,
+            <Tag
+              {...properties}
+            />,
+            <Tag
+              {...properties}
+            />,
+          ]
+        )
+      `,
+      options: [2],
+    },
+    {
+      code: `
+        const Item = ({ id, name, onSelect }) => <div onClick={onSelect}>
+          {id}: {name}
+        </div>;
+      `,
+      options: [2],
+    },
+    {
+      code: `
+        type Props = {
+          email: string,
+          password: string,
+          error: string,
+        }
+
+        const SomeFormComponent = ({
+          email,
+          password,
+          error,
+        }: Props) => (
+          // JSX
+        );
+      `,
+      features: ['flow'].concat(semver.satisfies(eslintVersion, '< 8') ? 'no-babel-old' : []),
+    },
+    {
+      code: `
+        <a role={'button'}
+          className={\`navbar-burger \${open ? 'is-active' : ''}\`}
+          href={'#'}
+          aria-label={'menu'}
+          aria-expanded={false}
+          onClick={openMenu}>
+          <span aria-hidden={'true'}/>
+          <span aria-hidden={'true'}/>
+          <span aria-hidden={'true'}/>
+        </a>
+      `,
+      options: [2],
+    },
+    {
+      code: `
+        export default class App extends React.Component {
+          state = {
+            name: '',
+          }
+
+          componentDidMount() {
+            this.fetchName()
+              .then(name => {
+                this.setState({name})
+              });
+          }
+
+          fetchName = () => {
+            const url = 'https://api.github.com/users/job13er'
+            return fetch(url)
+              .then(resp => resp.json())
+              .then(json => json.name)
+          }
+
+          render() {
+            const {name} = this.state
+            return (
+              <h1>Hello, {name}</h1>
+            )
+          }
+        }
+      `,
+      features: ['class fields'],
+      options: [2],
+    },
+    {
+      code: `
+        function test (foo) {
+          return foo != null
+            ? Math.max(0, Math.min(1, 10))
+            : 0
+        }
+      `,
+      options: [99],
+    },
+    {
+      code: `
+        function test (foo) {
+          return foo != null
+            ? <div>foo</div>
+            : <div>bar</div>
+        }
+      `,
+      options: [2],
+    },
   ]),
 
-  invalid: parsers.all([
+  invalid: parsers.all([].concat(
     {
       code: `
         <div>
@@ -1291,6 +1426,17 @@ const Component = () => (
       errors: [
         {
           messageId: 'wrongIndent',
+          line: 3,
+          data: {
+            needed: 10,
+            type: 'space',
+            characters: 'characters',
+            gotten: 17,
+          },
+        },
+        {
+          messageId: 'wrongIndent',
+          line: 5,
           data: {
             needed: 10,
             type: 'space',
@@ -1319,6 +1465,17 @@ const Component = () => (
       errors: [
         {
           messageId: 'wrongIndent',
+          line: 3,
+          data: {
+            needed: 10,
+            type: 'space',
+            characters: 'characters',
+            gotten: 12,
+          },
+        },
+        {
+          messageId: 'wrongIndent',
+          line: 5,
           data: {
             needed: 10,
             type: 'space',
@@ -2622,7 +2779,7 @@ const Component = () => (
         },
       ],
     },
-    {
+    parsers.skipDueToMultiErrorSorting ? [] : {
       code: `
         <div>
           text
@@ -2656,7 +2813,7 @@ const Component = () => (
         },
       ],
     },
-    {
+    parsers.skipDueToMultiErrorSorting ? [] : {
       code: `
         <div>
         \t  text
@@ -2738,5 +2895,274 @@ const Component = () => (
         },
       ],
     },
-  ]),
+    {
+      code: `
+        const StatelessComponent = () => {
+          if (new Date() % 2) {
+              return (
+        <div>Hello</div>
+              );
+          }
+          return null;
+        };
+      `,
+      output: `
+        const StatelessComponent = () => {
+          if (new Date() % 2) {
+              return (
+                  <div>Hello</div>
+              );
+          }
+          return null;
+        };
+      `,
+      errors: [
+        {
+          messageId: 'wrongIndent',
+          data: {
+            needed: 18,
+            gotten: 8,
+            type: 'space',
+            characters: 'characters',
+          },
+        },
+      ],
+    },
+    {
+      code: `
+        function App() {
+          return (
+            <App />
+            );
+        }
+      `,
+      output: `
+        function App() {
+          return (
+            <App />
+          );
+        }
+      `,
+      options: [2],
+      parserOptions,
+      errors: [{ message: 'Expected indentation of 10 space characters but found 12.' }],
+    },
+    {
+      code: `
+        function App() {
+          return (
+            <App />
+        );
+        }
+      `,
+      output: `
+        function App() {
+          return (
+            <App />
+          );
+        }
+      `,
+      options: [2],
+      parserOptions,
+      errors: [{ message: 'Expected indentation of 10 space characters but found 8.' }],
+    },
+    {
+      code: `
+        {condition && [
+            <Tag key="a" onClick={() => {
+              // some code
+            }} />,
+            <Tag key="b" onClick={() => {
+              // some code
+            }} />,
+          ]
+        }
+      `,
+      output: `
+        {condition && [
+          <Tag key="a" onClick={() => {
+              // some code
+            }} />,
+          <Tag key="b" onClick={() => {
+              // some code
+            }} />,
+          ]
+        }
+      `,
+      options: [2],
+      errors: [
+        {
+          message: 'Expected indentation of 10 space characters but found 12.',
+          line: 3,
+        },
+        {
+          message: 'Expected indentation of 10 space characters but found 12.',
+          line: 6,
+        },
+      ],
+    },
+    {
+      code: `
+        const IndexPage = () => (
+          <h1>
+        {"Hi people"}
+        <button/>
+        </h1>
+        );
+      `,
+      output: `
+        const IndexPage = () => (
+          <h1>
+            {"Hi people"}
+            <button/>
+          </h1>
+        );
+      `,
+      options: [2],
+      errors: [
+        {
+          messageId: 'wrongIndent',
+          data: {
+            needed: 12,
+            type: 'space',
+            characters: 'characters',
+            gotten: 8,
+          },
+        },
+        {
+          messageId: 'wrongIndent',
+          data: {
+            needed: 12,
+            type: 'space',
+            characters: 'characters',
+            gotten: 8,
+          },
+        },
+        {
+          messageId: 'wrongIndent',
+          data: {
+            needed: 10,
+            type: 'space',
+            characters: 'characters',
+            gotten: 8,
+          },
+        },
+      ],
+    },
+    // Would be nice to handle in one pass, but multipass works fine.
+    {
+      code: `
+        const IndexPage = () => (
+          <h1>
+        Hi people
+        <button/>
+        </h1>
+        );
+      `,
+
+      output: `
+        const IndexPage = () => (
+          <h1>
+            Hi people
+        <button/>
+          </h1>
+        );
+      `,
+      options: [2],
+      errors: [
+        {
+          messageId: 'wrongIndent',
+          data: {
+            needed: 12,
+            type: 'space',
+            characters: 'characters',
+            gotten: 8,
+          },
+        },
+        {
+          messageId: 'wrongIndent',
+          data: {
+            needed: 12,
+            type: 'space',
+            characters: 'characters',
+            gotten: 8,
+          },
+        },
+        {
+          messageId: 'wrongIndent',
+          data: {
+            needed: 10,
+            type: 'space',
+            characters: 'characters',
+            gotten: 8,
+          },
+        },
+      ],
+    },
+    {
+      code: `
+        const IndexPage = () => (
+          <h1>
+            Hi people
+        <button/>
+          </h1>
+        );
+      `,
+
+      output: `
+        const IndexPage = () => (
+          <h1>
+            Hi people
+            <button/>
+          </h1>
+        );
+      `,
+      options: [2],
+      errors: [
+        {
+          messageId: 'wrongIndent',
+          data: {
+            needed: 12,
+            type: 'space',
+            characters: 'characters',
+            gotten: 8,
+          },
+        },
+      ],
+    },
+    semver.satisfies(eslintVersion, '> 4') ? {
+      code: `
+        import React from 'react';
+
+        export default function () {
+            return (
+                <div>
+                            Test1
+
+                      <p>Test2</p>
+                </div>
+            );
+        }
+      `,
+      // TODO: remove two spaces from the Test2 output line
+      output: `
+        import React from 'react';
+
+        export default function () {
+            return (
+                <div>
+                    Test1
+
+                      <p>Test2</p>
+                </div>
+            );
+        }
+      `,
+      options: [4],
+      errors: [
+        { messageId: 'wrongIndent', line: 6 },
+        { messageId: 'wrongIndent', line: 9 },
+      ],
+    } : []
+  )),
 });

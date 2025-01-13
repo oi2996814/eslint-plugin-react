@@ -7,9 +7,12 @@ const fs = require('fs');
 const path = require('path');
 
 const plugin = require('..');
+const index = require('../lib/rules');
 
 const ruleFiles = fs.readdirSync(path.resolve(__dirname, '../lib/rules/'))
-  .map((f) => path.basename(f, '.js'));
+  .filter((f) => f.endsWith('.js'))
+  .map((f) => path.basename(f, '.js'))
+  .filter((f) => f !== 'index');
 
 describe('all rule files should be exported by the plugin', () => {
   ruleFiles.forEach((ruleName) => {
@@ -19,13 +22,20 @@ describe('all rule files should be exported by the plugin', () => {
         require(path.join('../lib/rules', ruleName)) // eslint-disable-line global-require, import/no-dynamic-require
       );
     });
+
+    it(`should export ${ruleName} from lib/rules/index`, () => {
+      assert.equal(
+        plugin.rules[ruleName],
+        index[ruleName]
+      );
+    });
   });
 });
 
 describe('deprecated rules', () => {
   it('marks all deprecated rules as deprecated', () => {
     ruleFiles.forEach((ruleName) => {
-      const inDeprecatedRules = Boolean(plugin.deprecatedRules[ruleName]);
+      const inDeprecatedRules = !!plugin.deprecatedRules[ruleName];
       const isDeprecated = plugin.rules[ruleName].meta.deprecated;
       if (inDeprecatedRules) {
         assert(isDeprecated, `${ruleName} metadata should mark it as deprecated`);
@@ -68,13 +78,13 @@ describe('configurations', () => {
     });
 
     ruleFiles.forEach((ruleName) => {
-      const inDeprecatedRules = Boolean(plugin.deprecatedRules[ruleName]);
+      const inDeprecatedRules = !!plugin.deprecatedRules[ruleName];
       const inConfig = typeof plugin.configs[configName].rules[`react/${ruleName}`] !== 'undefined';
       assert(inDeprecatedRules ^ inConfig); // eslint-disable-line no-bitwise
     });
   });
 
-  it('should export a \'jsx-runtime\' configuration', () => {
+  it('should export a ‘jsx-runtime’ configuration', () => {
     const configName = 'jsx-runtime';
     assert(plugin.configs[configName]);
 
@@ -82,7 +92,7 @@ describe('configurations', () => {
       assert.ok(ruleName.startsWith('react/'));
       assert.equal(plugin.configs[configName].rules[ruleName], 0);
 
-      const inDeprecatedRules = Boolean(plugin.deprecatedRules[ruleName]);
+      const inDeprecatedRules = !!plugin.deprecatedRules[ruleName];
       const inConfig = typeof plugin.configs[configName].rules[ruleName] !== 'undefined';
       assert(inDeprecatedRules ^ inConfig); // eslint-disable-line no-bitwise
     });

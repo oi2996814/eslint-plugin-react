@@ -9,7 +9,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/function-component-definition');
 
 const parserOptions = {
@@ -58,11 +58,19 @@ ruleTester.run('function-component-definition', rule, {
       options: [{ namedComponents: 'arrow-function' }],
     },
     {
+      code: 'const Hello = (props) => { return <div/> }',
+      options: [{ namedComponents: 'arrow-function' }],
+    },
+    {
       code: 'function Hello(props) { return <div/> }',
       options: [{ namedComponents: 'function-declaration' }],
     },
     {
       code: 'var Hello = function(props) { return <div/> }',
+      options: [{ namedComponents: 'function-expression' }],
+    },
+    {
+      code: 'const Hello = function(props) { return <div/> }',
       options: [{ namedComponents: 'function-expression' }],
     },
     {
@@ -75,6 +83,10 @@ ruleTester.run('function-component-definition', rule, {
     },
     {
       code: 'var Foo = React.memo(function Foo() { return <p/> })',
+      options: [{ namedComponents: 'function-declaration' }],
+    },
+    {
+      code: 'const Foo = React.memo(function Foo() { return <p/> })',
       options: [{ namedComponents: 'function-declaration' }],
     },
     {
@@ -195,7 +207,7 @@ ruleTester.run('function-component-definition', rule, {
       options: [{ namedComponents: 'function-declaration' }],
       features: ['types'],
     },
-    // https://github.com/yannickcr/eslint-plugin-react/issues/2765
+    // https://github.com/jsx-eslint/eslint-plugin-react/issues/2765
     {
       code: `
         const obj = {
@@ -394,6 +406,45 @@ ruleTester.run('function-component-definition', rule, {
       `,
       options: [{ unnamedComponents: ['arrow-function', 'function-expression'] }],
     },
+    {
+      // should not report non-jsx components
+      code: `
+        export default (key, subTree = {}) => {
+          return (state) => {
+            const dataInStore = getFromDataModel(key)(state);
+            const fullPaths = dataInStore.map((item, index) => {
+              return [key, index];
+            });
+
+            return {
+              key,
+              paths: fullPaths.map((p) => [p[1]]),
+              fullPaths,
+              subTree: Object.keys(subTree).length ? subTree : null,
+            }
+          };
+        }
+      `,
+    },
+    {
+      // should not report non-jsx components
+      code: `
+        function mapStateToProps() {
+          const internItems = makeInternArray();
+          const internClassList = makeInternArray();
+
+          return (state, props) => {
+            const { store, bucket, singleCharacter } = props;
+
+            return {
+              store: null,
+              destinyVersion: store.destinyVersion,
+              storeId: store.id,
+            }
+          }
+        }
+      `,
+    },
   ]),
 
   invalid: parsers.all([
@@ -404,7 +455,7 @@ ruleTester.run('function-component-definition', rule, {
         }
       `,
       output: `
-        var Hello = (props) => {
+        const Hello = (props) => {
           return <div/>;
         }
       `,
@@ -469,12 +520,62 @@ ruleTester.run('function-component-definition', rule, {
     },
     {
       code: `
+        let Hello = (props) => {
+          return <div/>;
+        }
+      `,
+      output: `
+        let Hello = function(props) {
+          return <div/>;
+        }
+      `,
+      options: [{ namedComponents: 'function-expression' }],
+      errors: [{ messageId: 'function-expression' }],
+    },
+    {
+      code: `
+        let Hello;
+        Hello = (props) => {
+          return <div/>;
+        }
+      `,
+      output: `
+        let Hello;
+        Hello = function(props) {
+          return <div/>;
+        }
+      `,
+      options: [{ namedComponents: 'function-expression' }],
+      errors: [{ messageId: 'function-expression' }],
+    },
+    {
+      code: `
+        let Hello = (props) => {
+          return <div/>;
+        }
+        Hello = function(props) {
+          return <span/>;
+        }
+      `,
+      output: `
+        let Hello = function(props) {
+          return <div/>;
+        }
+        Hello = function(props) {
+          return <span/>;
+        }
+      `,
+      options: [{ namedComponents: 'function-expression' }],
+      errors: [{ messageId: 'function-expression' }],
+    },
+    {
+      code: `
         function Hello(props) {
           return <div/>;
         }
       `,
       output: `
-        var Hello = function(props) {
+        const Hello = function(props) {
           return <div/>;
         }
       `,
@@ -554,7 +655,7 @@ ruleTester.run('function-component-definition', rule, {
         }
       `,
       output: `
-        var Hello = (props: Test) => {
+        const Hello = (props: Test) => {
           return <div/>;
         }
       `,
@@ -584,13 +685,76 @@ ruleTester.run('function-component-definition', rule, {
         }
       `,
       output: `
-        var Hello = function(props: Test) {
+        const Hello = function(props: Test) {
           return <div/>;
         }
       `,
       options: [{ namedComponents: 'function-expression' }],
       errors: [{ messageId: 'function-expression' }],
       features: ['types'],
+    },
+    {
+      code: `
+        function Hello(props: Test) {
+          return React.createElement('div');
+        }
+      `,
+      output: `
+        var Hello = function(props: Test) {
+          return React.createElement('div');
+        }
+      `,
+      options: [{ namedComponents: 'function-expression' }],
+      errors: [{ messageId: 'function-expression' }],
+      features: ['types'],
+    },
+    {
+      code: `
+        import * as React from 'react';
+        function Hello(props: Test) {
+          return React.createElement('div');
+        }
+      `,
+      output: `
+        import * as React from 'react';
+        const Hello = function(props: Test) {
+          return React.createElement('div');
+        }
+      `,
+      options: [{ namedComponents: 'function-expression' }],
+      errors: [{ messageId: 'function-expression' }],
+      features: ['types'],
+    },
+    {
+      code: `
+        export function Hello(props: Test) {
+          return React.createElement('div');
+        }
+      `,
+      output: `
+        export const Hello = function(props: Test) {
+          return React.createElement('div');
+        }
+      `,
+      options: [{ namedComponents: 'function-expression' }],
+      errors: [{ messageId: 'function-expression' }],
+      features: ['types'],
+    },
+    {
+      code: `
+        function Hello(props) {
+          return React.createElement('div');
+        }
+        export default Hello;
+      `,
+      output: `
+        const Hello = function(props) {
+          return React.createElement('div');
+        }
+        export default Hello;
+      `,
+      options: [{ namedComponents: 'function-expression' }],
+      errors: [{ messageId: 'function-expression' }],
     },
     {
       code: `
@@ -643,11 +807,7 @@ ruleTester.run('function-component-definition', rule, {
           return <div/>;
         }
       `,
-      output: `
-        var Hello: React.FC<Test> = function(props) {
-          return <div/>;
-        }
-      `,
+      output: null,
       options: [{ namedComponents: 'function-declaration' }],
       errors: [{ messageId: 'function-declaration' }],
       features: ['types'],
@@ -658,11 +818,7 @@ ruleTester.run('function-component-definition', rule, {
           return <div/>;
         };
       `,
-      output: `
-        var Hello: React.FC<Test> = (props) => {
-          return <div/>;
-        };
-      `,
+      output: null,
       options: [{ namedComponents: 'function-declaration' }],
       errors: [{ messageId: 'function-declaration' }],
       features: ['types'],
@@ -674,7 +830,7 @@ ruleTester.run('function-component-definition', rule, {
         }
       `,
       output: `
-        var Hello = <Test extends {}>(props: Test) => {
+        const Hello = <Test extends {}>(props: Test) => {
           return <div/>;
         }
       `,
@@ -688,11 +844,7 @@ ruleTester.run('function-component-definition', rule, {
           return <div/>;
         }
       `,
-      output: `
-        function Hello<Test>(props: Test) {
-          return <div/>;
-        }
-      `,
+      output: null,
       options: [{ namedComponents: 'arrow-function' }],
       errors: [{ messageId: 'arrow-function' }],
       features: ['types'],
@@ -704,7 +856,7 @@ ruleTester.run('function-component-definition', rule, {
         }
       `,
       output: `
-        var Hello = function<Test extends {}>(props: Test) {
+        const Hello = function<Test extends {}>(props: Test) {
           return <div/>;
         }
       `,
@@ -799,13 +951,7 @@ ruleTester.run('function-component-definition', rule, {
           }
         }
       `,
-      output: `
-        function wrap(Component) {
-          return function<Test>(props) {
-            return <div><Component {...props}/></div>
-          }
-        }
-      `,
+      output: null,
       errors: [{ messageId: 'arrow-function' }],
       options: [{ unnamedComponents: 'arrow-function' }],
       features: ['types'],
@@ -874,7 +1020,7 @@ ruleTester.run('function-component-definition', rule, {
         }
       `,
       output: `
-        export var Hello = (props) => {
+        export const Hello = (props) => {
           return <div/>;
         }
       `,
@@ -934,7 +1080,7 @@ ruleTester.run('function-component-definition', rule, {
         }
       `,
       output: `
-        var Hello = (props) => {
+        const Hello = (props) => {
           return <div/>;
         }
       `,
@@ -968,6 +1114,36 @@ ruleTester.run('function-component-definition', rule, {
       `,
       options: [{ namedComponents: ['function-expression', 'function-declaration'] }],
       errors: [{ messageId: 'function-expression' }],
+    },
+    {
+      code: `
+        const genX = (symbol) => \`the symbol is \${symbol}\`;
+
+        const IndexPage = () => {
+          return (
+            <div>
+              Hello World.{genX('$')}
+            </div>
+          )
+        }
+
+        export default IndexPage;
+      `,
+      output: `
+        const genX = (symbol) => \`the symbol is \${symbol}\`;
+
+        function IndexPage() {
+          return (
+            <div>
+              Hello World.{genX('$')}
+            </div>
+          )
+        }
+
+        export default IndexPage;
+      `,
+      options: [{ namedComponents: ['function-declaration'] }],
+      errors: [{ messageId: 'function-declaration' }],
     },
   ]),
 });

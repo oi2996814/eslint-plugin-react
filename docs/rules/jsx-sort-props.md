@@ -1,8 +1,10 @@
-# Enforce props alphabetical sorting (react/jsx-sort-props)
+# Enforce props alphabetical sorting (`react/jsx-sort-props`)
+
+🔧 This rule is automatically fixable by the [`--fix` CLI option](https://eslint.org/docs/latest/user-guide/command-line-interface#--fix).
+
+<!-- end auto-generated rule header -->
 
 Some developers prefer to sort props names alphabetically to be able to find necessary props easier at the later time. Others feel that it adds complexity and becomes burden to maintain.
-
-**Fixable:** This rule is automatically fixable using the `--fix` flag on the command line.
 
 ## Rule Details
 
@@ -29,9 +31,11 @@ Examples of **correct** code for this rule:
   "callbacksLast": <boolean>,
   "shorthandFirst": <boolean>,
   "shorthandLast": <boolean>,
+  "multiline": "ignore" | "first" | "last",
   "ignoreCase": <boolean>,
   "noSortAlphabetically": <boolean>,
   "reservedFirst": <boolean>|<array<string>>,
+  "locale": "auto" | "any valid locale"
 }]
 ...
 ```
@@ -70,6 +74,42 @@ When `true`, short hand props must be listed after all other props (unless `call
 <Hello name="John" tel={5555555} active validate />
 ```
 
+### `multiline`
+
+Enforced sorting for multiline props
+
+- `ignore`: Multiline props will not be taken in consideration for sorting.
+
+- `first`: Multiline props must be listed before all other props (unless `shorthandFirst` is set), but still respecting the alphabetical order.
+
+- `last`: Multiline props must be listed after all other props (unless either `callbacksLast` or `shorthandLast` are set), but still respecting the alphabetical order.
+
+Defaults to `ignore`.
+
+```jsx
+// 'jsx-sort-props': [1, { multiline: 'first' }]
+<Hello
+  classes={{
+    greetings: classes.greetings,
+  }}
+  active
+  validate
+  name="John"
+  tel={5555555}
+/>
+
+// 'jsx-sort-props': [1, { multiline: 'last' }]
+<Hello
+  active
+  validate
+  name="John"
+  tel={5555555}
+  classes={{
+    greetings: classes.greetings,
+  }}
+/>
+```
+
 ### `noSortAlphabetically`
 
 When `true`, alphabetical order is **not** enforced:
@@ -85,8 +125,8 @@ This can be a boolean or an array option.
 When `reservedFirst` is defined, React reserved props (`children`, `dangerouslySetInnerHTML` - **only for DOM components**, `key`, and `ref`) must be listed before all other props, but still respecting the alphabetical order:
 
 ```jsx
-<Hello key={0} ref="John" name="John">
-  <div dangerouslySetInnerHTML={{__html: 'ESLint Plugin React!'}} ref="dangerDiv" />
+<Hello key={0} ref={johnRef} name="John">
+  <div dangerouslySetInnerHTML={{__html: 'ESLint Plugin React!'}} ref={dangerDivRef} />
 </Hello>
 ```
 
@@ -95,8 +135,14 @@ If given as an array, the array's values will override the default list of reser
 With `reservedFirst: ["key"]`, the following will **not** warn:
 
 ```jsx
-<Hello key={'uuid'} name="John" ref="ref" />
+<Hello key={'uuid'} name="John" ref={johnRef} />
 ```
+
+### `locale`
+
+Defaults to `"auto"`, meaning, the locale of the current environment.
+
+Any other string provided here may be passed to `String.prototype.localeCompare` - note that an unknown or invalid locale may throw an exception and crash.
 
 ## When Not To Use It
 

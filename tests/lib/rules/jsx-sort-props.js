@@ -9,7 +9,9 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const semver = require('semver');
+const eslintPkg = require('eslint/package.json');
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/jsx-sort-props');
 
 const parsers = require('../../helpers/parsers');
@@ -44,6 +46,14 @@ const expectedShorthandLastError = {
   messageId: 'listShorthandLast',
   type: 'JSXIdentifier',
 };
+const expectedMultilineFirstError = {
+  messageId: 'listMultilineFirst',
+  type: 'JSXIdentifier',
+};
+const expectedMultilineLastError = {
+  messageId: 'listMultilineLast',
+  type: 'JSXIdentifier',
+};
 const expectedReservedFirstError = {
   messageId: 'listReservedPropsFirst',
   type: 'JSXIdentifier',
@@ -60,6 +70,12 @@ const ignoreCaseAndCallbackLastArgs = [
   {
     callbacksLast: true,
     ignoreCase: true,
+  },
+];
+const reservedFirstAndCallbacksLastArgs = [
+  {
+    callbacksLast: true,
+    reservedFirst: true,
   },
 ];
 const shorthandFirstArgs = [{ shorthandFirst: true }];
@@ -89,9 +105,24 @@ const reservedFirstWithShorthandLast = [
 ];
 const reservedFirstAsEmptyArrayArgs = [{ reservedFirst: [] }];
 const reservedFirstAsInvalidArrayArgs = [{ reservedFirst: ['notReserved'] }];
+const multilineFirstArgs = [{ multiline: 'first' }];
+const multilineAndShorthandFirstArgs = [
+  {
+    multiline: 'first',
+    shorthandFirst: true,
+  },
+];
+const multilineLastArgs = [{ multiline: 'last' }];
+const multilineAndShorthandAndCallbackLastArgs = [
+  {
+    multiline: 'last',
+    shorthandLast: true,
+    callbacksLast: true,
+  },
+];
 
 ruleTester.run('jsx-sort-props', rule, {
-  valid: parsers.all([
+  valid: parsers.all([].concat(
     { code: '<App />;' },
     { code: '<App {...this.props} />;' },
     { code: '<App a b c />;' },
@@ -123,6 +154,97 @@ ruleTester.run('jsx-sort-props', rule, {
     {
       code: '<App a="a" b="b" x y z onBar onFoo />;',
       options: shorthandAndCallbackLastArgs,
+    },
+    // Sorting multiline props before others
+    {
+      code: `
+        <App
+          a={{
+            aA: 1,
+          }}
+          b
+        />
+      `,
+      options: multilineFirstArgs,
+    },
+    {
+      code: `
+        <App
+          a={{
+            aA: 1,
+          }}
+          b={[
+            1,
+          ]}
+          c
+          d
+        />
+      `,
+      options: multilineFirstArgs,
+    },
+    {
+      code: `
+        <App
+          a
+          b
+          c={{
+            cC: 1,
+          }}
+          d={[
+            1,
+          ]}
+          e="1"
+        />
+      `,
+      options: multilineAndShorthandFirstArgs,
+    },
+    // Sorting multiline props after others
+    {
+      code: `
+        <App
+          a
+          b={{
+            bB: 1,
+          }}
+        />
+      `,
+      options: multilineLastArgs,
+    },
+    {
+      code: `
+        <App
+          a
+          b
+          c="1"
+          d={{
+            dD: 1,
+          }}
+          e={[
+            1,
+          ]}
+        />
+      `,
+      options: multilineLastArgs,
+    },
+    {
+      code: `
+        <App
+          a={1}
+          b="1"
+          c={{
+            cC: 1,
+          }}
+          d={() => (
+            1
+          )}
+          e
+          f
+          onClick={() => ({
+            gG: 1,
+          })}
+        />
+      `,
+      options: multilineAndShorthandAndCallbackLastArgs,
     },
     // noSortAlphabetically
     { code: '<App a b />;', options: noSortAlphabeticallyArgs },
@@ -156,8 +278,27 @@ ruleTester.run('jsx-sort-props', rule, {
       code: '<App key="key" c="c" b />',
       options: reservedFirstWithShorthandLast,
     },
-  ]),
-  invalid: parsers.all([
+    {
+      code: `
+        <RawFileField
+          onChange={handleChange}
+          onFileRemove={asMedia ? null : handleRemove}
+          {...props}
+        />
+      `,
+    },
+    semver.satisfies(process.version, '>= 13') ? {
+      code: `
+        <RawFileField
+          onFileRemove={asMedia ? null : handleRemove}
+          onChange={handleChange}
+          {...props}
+        />
+      `,
+      options: [{ locale: 'sk-SK' }],
+    } : []
+  )),
+  invalid: parsers.all([].concat(
     {
       code: '<App b a />;',
       errors: [expectedError],
@@ -483,5 +624,483 @@ ruleTester.run('jsx-sort-props', rule, {
       options: reservedFirstAsInvalidArrayArgs,
       errors: [expectedInvalidReservedFirstError],
     },
-  ]),
+    {
+      code: '<App onBar z />;',
+      output: '<App z onBar />;',
+      options: reservedFirstAndCallbacksLastArgs,
+      errors: [expectedCallbackError],
+    // multiline first
+    },
+    {
+      code: `
+        <App
+          a
+          b={{
+            bB: 1,
+          }}
+        />
+      `,
+      options: multilineFirstArgs,
+      errors: [expectedMultilineFirstError],
+      output: `
+        <App
+          b={{
+            bB: 1,
+          }}
+          a
+        />
+      `,
+    },
+    {
+      code: `
+        <App
+          a={1}
+          b={{
+            bB: 1,
+          }}
+          c
+        />
+      `,
+      options: multilineAndShorthandFirstArgs,
+      errors: [expectedMultilineFirstError, expectedShorthandFirstError],
+      output: `
+        <App
+          c
+          b={{
+            bB: 1,
+          }}
+          a={1}
+        />
+      `,
+    },
+    // multiline last
+    {
+      code: `
+        <App
+          a={{
+            aA: 1,
+          }}
+          b
+        />
+      `,
+      options: multilineLastArgs,
+      errors: [expectedMultilineLastError],
+      output: `
+        <App
+          b
+          a={{
+            aA: 1,
+          }}
+        />
+      `,
+    },
+    {
+      code: `
+        <App
+          a={{
+            aA: 1,
+          }}
+          b
+          inline={1}
+          onClick={() => ({
+            c: 1
+          })}
+          d="dD"
+          e={() => ({
+            eE: 1
+          })}
+          f
+        />
+      `,
+      options: multilineAndShorthandAndCallbackLastArgs,
+      errors: [
+        {
+          messageId: 'listShorthandLast',
+          line: 6,
+        },
+        {
+          messageId: 'listCallbacksLast',
+          line: 8,
+        },
+      ],
+      output: `
+        <App
+          d="dD"
+          inline={1}
+          a={{
+            aA: 1,
+          }}
+          e={() => ({
+            eE: 1
+          })}
+          b
+          f
+          onClick={() => ({
+            c: 1
+          })}
+        />
+      `,
+    },
+    {
+      code: `
+        <Typography
+          float
+          className={classNames(classes.inputWidth, {
+            [classes.noBorder]: isActive === "values",
+          })}
+          disabled={isDisabled}
+          initialValue={computePercentage(number, count)}
+          InputProps={{
+            ...customInputProps,
+          }}
+          key={index}
+          isRequired
+          {...sharedTypographyProps}
+          ref={textRef}
+          min="0"
+          name="fieldName"
+          placeholder={getTranslation("field")}
+          onValidate={validate}
+          inputProps={{
+            className: inputClassName,
+          }}
+          outlined
+          {...rest}
+        />
+      `,
+      options: [
+        {
+          multiline: 'last',
+          shorthandFirst: true,
+          callbacksLast: true,
+          reservedFirst: true,
+          ignoreCase: true,
+        },
+      ],
+      output: `
+        <Typography
+          key={index}
+          float
+          isRequired
+          disabled={isDisabled}
+          initialValue={computePercentage(number, count)}
+          className={classNames(classes.inputWidth, {
+            [classes.noBorder]: isActive === "values",
+          })}
+          InputProps={{
+            ...customInputProps,
+          }}
+          {...sharedTypographyProps}
+          ref={textRef}
+          outlined
+          min="0"
+          name="fieldName"
+          placeholder={getTranslation("field")}
+          inputProps={{
+            className: inputClassName,
+          }}
+          onValidate={validate}
+          {...rest}
+        />
+      `,
+      errors: [
+        {
+          messageId: 'listMultilineLast',
+          line: 4,
+        },
+        {
+          messageId: 'listReservedPropsFirst',
+          line: 12,
+        },
+        {
+          messageId: 'listShorthandFirst',
+          line: 13,
+        },
+        {
+          messageId: 'listCallbacksLast',
+          line: 19,
+        },
+      ],
+    },
+    semver.satisfies(eslintPkg.version, '> 3') ? {
+      code: `
+        <foo
+          m={0}
+          n={0} // this is n
+          o={0}
+          c={0} // this is c
+          // fofof
+          f={0} // this is f
+          a={0}
+          b={0}
+          d={0}
+        />
+      `,
+      output: `
+        <foo
+          a={0}
+          b={0}
+          d={0}
+          m={0}
+          n={0} // this is n
+          o={0}
+          c={0} // this is c
+          // fofof
+          f={0} // this is f
+        />
+      `,
+      errors: [
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 6,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 8,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 9,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 10,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 11,
+        },
+      ],
+    } : [],
+    semver.satisfies(eslintPkg.version, '> 3') ? {
+      code: `
+        <foo
+          m={0}
+          n={0} // this is n
+          o={0}
+          c={0} // this is c
+          f={0} // this is f
+          e={0}
+          a={0}
+          b={0}
+          d={0}
+        />
+      `,
+      output: `
+        <foo
+          a={0}
+          b={0}
+          c={0} // this is c
+          d={0}
+          e={0}
+          f={0} // this is f
+          m={0}
+          n={0} // this is n
+          o={0}
+        />
+      `,
+      errors: [
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 6,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 7,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 8,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 9,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 10,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 11,
+        },
+      ],
+    } : [],
+    semver.satisfies(eslintPkg.version, '> 3') ? {
+      code: `
+        <foo
+          a1={0}
+          g={0}
+          d={0} // comment for d
+          // comment for d and aa
+          aa={0}
+          c={0} // comment for c
+          // comment for c and e
+          e={1}
+          ab={1} // comment for ab
+          f={0}
+        />
+      `,
+      output: `
+        <foo
+          a1={0}
+          ab={1} // comment for ab
+          f={0}
+          g={0}
+          c={0} // comment for c
+          // comment for c and e
+          e={1}
+          d={0} // comment for d
+          // comment for d and aa
+          aa={0}
+        />
+      `,
+      errors: [
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 5,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 7,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 8,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 10,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 11,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 12,
+        },
+      ],
+    } : [],
+    semver.satisfies(eslintPkg.version, '> 3') ? {
+      code: `
+        <foo
+          a1={0}
+          ab={1}
+          // comment for ab and f
+          f={0}
+          g={0}
+          c={0} // comment for c
+          // comment for c and e
+          e={1}
+          d={0}
+          aa={1} // comment for aa
+        />
+      `,
+      output: `
+        <foo
+          a1={0}
+          aa={1} // comment for aa
+          d={0}
+          g={0}
+          ab={1}
+          // comment for ab and f
+          f={0}
+          c={0} // comment for c
+          // comment for c and e
+          e={1}
+        />
+      `,
+      errors: [
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 8,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 10,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 11,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 12,
+        },
+      ],
+    } : [],
+    semver.satisfies(eslintPkg.version, '> 3') ? {
+      code: `
+        <foo a={0} b={1} /* comment for b and ab */ ab={1} aa={0} />
+      `,
+      output: `
+        <foo a={0} aa={0} b={1} /* comment for b and ab */ ab={1} />
+      `,
+      errors: [
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 2,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 2,
+        },
+      ],
+    } : [],
+    semver.satisfies(eslintPkg.version, '> 3') ? {
+      code: `
+        <ReactJson src={rowResult} name="data" collapsed={4} collapseStringsAfterLength={60} onEdit={onEdit} /* onDelete={onEdit} */ />
+      `,
+      output: `
+        <ReactJson collapseStringsAfterLength={60} collapsed={4} name="data" src={rowResult} onEdit={onEdit} /* onDelete={onEdit} */ />
+      `,
+      errors: [
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 2,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 2,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 2,
+        },
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 2,
+        },
+      ],
+    } : [],
+    {
+      code: `
+        <Page
+          // Pass all the props to the Page component.
+          {...props}
+          // Use the platform specific props from the doc.ts file.
+          {...TemplatePageProps[platform]}
+          // Use the getSubTitle helper function to get the page header subtitle from the active platform.
+          subTitle={getSubTitle(platform)}
+          // You can define custom sections using the \`otherSections\` prop.
+          // Here it is using a method that takes the platform as an argument to return the correct array of section props.
+          otherSections={_otherSections(platform) as IPageSectionProps[]}
+
+          // You can hide the side rail by setting \`showSideRail\` to false.
+          // showSideRail={false}
+
+          // You can pass a custom className to the page wrapper if needed.
+          // className="customPageClassName"
+        />
+      `,
+      features: ['ts', 'no-babel-old'],
+      errors: [
+        {
+          messageId: 'sortPropsByAlpha',
+          line: 11,
+        },
+      ],
+    }
+  )),
 });

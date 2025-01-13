@@ -8,7 +8,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/prefer-exact-props');
 const parsers = require('../../helpers/parsers');
 
@@ -91,6 +91,18 @@ ruleTester.run('prefer-exact-props', rule, {
           foo: string
         |}
         function Component(props: Props) {
+          return <div />;
+        }
+      `,
+      features: ['flow'],
+    },
+    {
+      code: `
+        type Props = {|
+          foo: string
+        |}
+        function Component(props: Props) {
+          let someVar: { foo: string };
           return <div />;
         }
       `,

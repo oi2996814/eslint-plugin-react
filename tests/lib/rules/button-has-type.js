@@ -9,7 +9,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/button-has-type');
 
 const parsers = require('../../helpers/parsers');
@@ -72,6 +72,31 @@ ruleTester.run('button-has-type', rule, {
           pragma: 'Foo',
         },
       },
+    },
+    {
+      code: `
+        function MyComponent(): ReactElement {
+          const buttonProps: (Required<Attributes> & ButtonHTMLAttributes<HTMLButtonElement>)[] = [
+            {
+              children: 'test',
+              key: 'test',
+              onClick: (): void => {
+                return;
+              },
+            },
+          ];
+
+          return <>
+            {
+              buttonProps.map(
+                ({ key, ...props }: Required<Attributes> & ButtonHTMLAttributes<HTMLButtonElement>): ReactElement =>
+                  <button key={key} type="button" {...props} />
+              )
+            }
+          </>;
+        }
+      `,
+      features: ['fragment', 'types'],
     },
   ]),
   invalid: parsers.all([
@@ -180,6 +205,15 @@ ruleTester.run('button-has-type', rule, {
       ],
     },
     {
+      code: '<button type/>',
+      errors: [
+        {
+          messageId: 'invalidValue',
+          data: { value: true },
+        },
+      ],
+    },
+    {
       code: '<button type={condition ? "reset" : "button"}/>',
       options: [{ reset: false }],
       errors: [
@@ -268,6 +302,12 @@ ruleTester.run('button-has-type', rule, {
           messageId: 'forbiddenValue',
           data: { value: 'reset' },
         },
+      ],
+    },
+    {
+      code: 'React.createElement("button", {...extraProps})',
+      errors: [
+        { messageId: 'missingType' },
       ],
     },
     {

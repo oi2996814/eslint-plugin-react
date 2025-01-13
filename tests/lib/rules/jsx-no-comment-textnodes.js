@@ -9,7 +9,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/jsx-no-comment-textnodes');
 
 const parsers = require('../../helpers/parsers');
@@ -160,6 +160,13 @@ ruleTester.run('jsx-no-comment-textnodes', rule, {
     },
     {
       code: '<pre>&#x2F;&#42; TODO: Write perfect code &#42;&#x2F;</pre>',
+    },
+    {
+      code: `
+        <div>
+          <span className="pl-c"><span className="pl-c">&#47;&#47;</span> ...</span><br />
+        </div>
+      `,
     },
   ]),
 

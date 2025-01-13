@@ -1,6 +1,8 @@
-# No `.bind()` or Arrow Functions in JSX Props (react/jsx-no-bind)
+# Disallow `.bind()` or arrow functions in JSX props (`react/jsx-no-bind`)
 
-A `bind` call or [arrow function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions) in a JSX prop will create a brand new function on every single render. This is bad for performance, as it may cause unnecessary re-renders if a brand new function is passed as a prop to a component that uses reference equality check on the prop to determine if it should update.
+<!-- end auto-generated rule header -->
+
+Using `bind` on a function or declaring a function in the render method of a component or the body of a functional component, and then passing that function as a prop will mean that the brand new function that is created on every single render will be considered a completely different function. This can affect performance in some situations, as it may cause unnecessary re-renders if a brand new function is passed as a prop to a component that uses reference equality check on the prop to determine if it should update, such as a component wrapped with [`memo`](https://react.dev/reference/react/memo#memo), or if the prop is used in any hook's "dependency array".
 
 Note that this behavior is different for `ref` props, which is a special case in React that **does not** cause re-renders when a brand new function is passed.  See [`ignore-refs`](#ignorerefs) below for more information.
 
@@ -11,15 +13,18 @@ Examples of **incorrect** code for this rule:
 ```jsx
 <Foo onClick={this._handleClick.bind(this)}></Foo>
 ```
+
 ```jsx
 <Foo onClick={() => console.log('Hello!')}></Foo>
 ```
+
 ```jsx
 function onClick() { console.log('Hello!'); }
 <Foo onClick={onClick} />
 ```
 
 Examples of **correct** code for this rule:
+
 ```jsx
 <Foo onClick={this._handleClick}></Foo>
 ```
@@ -148,7 +153,7 @@ This will speed up rendering, as it avoids the need to create new functions (thr
 
 ### ES6 Classes
 
-Unfortunately [React ES6 classes](https://facebook.github.io/react/blog/2015/01/27/react-v0.13.0-beta-1.html#es6-classes) do not autobind their methods like components created with the older `createReactClass` syntax. There are several approaches to binding methods for ES6 classes. A basic approach is to just manually bind the methods in the constructor:
+Unfortunately [React ES6 classes](https://legacy.reactjs.org/blog/2015/01/27/react-v0.13.0-beta-1.html#es6-classes) do not autobind their methods like components created with the older `createReactClass` syntax. There are several approaches to binding methods for ES6 classes. A basic approach is to just manually bind the methods in the constructor:
 
 ```jsx
 class Foo extends React.Component {
@@ -169,7 +174,7 @@ class Foo extends React.Component {
 }
 ```
 
-A more sophisticated approach would be to use something like an [autobind ES7 decorator](https://www.npmjs.com/package/core-decorators#autobind) or [property initializers](https://facebook.github.io/react/blog/2015/01/27/react-v0.13.0-beta-1.html#autobinding).
+A more sophisticated approach would be to use something like an [autobind ES7 decorator](https://www.npmjs.com/package/core-decorators#autobind) or [property initializers](https://legacy.reactjs.org/blog/2015/01/27/react-v0.13.0-beta-1.html#autobinding).
 
 ### React Hooks
 
@@ -186,7 +191,7 @@ const Button = () => {
 };
 ```
 
-Otherwise, the idiomatic way to avoid redefining callbacks on every render would be to memoize them using the [`useCallback`](https://reactjs.org/docs/hooks-reference.html#usecallback) hook:
+Otherwise, the idiomatic way to avoid redefining callbacks on every render would be to memoize them using the [`useCallback`](https://legacy.reactjs.org/docs/hooks-reference.html#usecallback) hook:
 
 ```jsx
 const Button = () => {
@@ -202,4 +207,4 @@ const Button = () => {
 
 ## When Not To Use It
 
-If you do not use JSX or do not want to enforce that `bind` or arrow functions are not used in props, then you can disable this rule.
+If you do not use JSX or do not want to enforce that `bind`, functions declared in the render method of a component, or functions declared in the body of a functional component are not used in props, then you can disable this rule.

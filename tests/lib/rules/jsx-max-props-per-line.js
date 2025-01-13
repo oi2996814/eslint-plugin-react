@@ -9,7 +9,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/jsx-max-props-per-line');
 
 const parsers = require('../../helpers/parsers');
@@ -532,6 +532,64 @@ baz bor
         {
           messageId: 'newLine',
           data: { prop: 'baz' },
+        },
+      ],
+    },
+    {
+      code: `
+        <DataTable<Items> fullscreen keyField="id" items={items}
+          activeSortableColumn={sorting}
+          onSortClick={handleSortedClick}
+          rowActions={[
+          ]}
+        />
+      `,
+      features: ['ts', 'no-babel-old'],
+      output: `
+        <DataTable<Items> fullscreen
+keyField="id"
+items={items}
+          activeSortableColumn={sorting}
+          onSortClick={handleSortedClick}
+          rowActions={[
+          ]}
+        />
+      `,
+      options: [{ maximum: { multi: 1, single: 1 } }],
+      errors: [
+        {
+          messageId: 'newLine',
+          data: { prop: 'keyField' },
+        },
+      ],
+    },
+    {
+      code: `
+        <DataTable<Items>
+fullscreen keyField="id" items={items}
+          activeSortableColumn={sorting}
+          onSortClick={handleSortedClick}
+          rowActions={[
+          ]}
+        />
+      `,
+      features: ['ts', 'no-babel-old'],
+      output: `
+        <DataTable<Items>
+fullscreen
+keyField="id"
+items={items}
+          activeSortableColumn={sorting}
+          onSortClick={handleSortedClick}
+          rowActions={[
+          ]}
+        />
+      `,
+      options: [{ maximum: { multi: 1, single: 1 } }],
+      errors: [
+        {
+          messageId: 'newLine',
+          data: { prop: 'keyField' },
         },
       ],
     },

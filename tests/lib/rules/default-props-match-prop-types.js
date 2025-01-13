@@ -10,7 +10,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/default-props-match-prop-types');
 
 const parsers = require('../../helpers/parsers');
@@ -775,6 +775,26 @@ ruleTester.run('default-props-match-prop-types', rule, {
         function Hello(props: Props) {
           return <div>Hello {props.name.firstname}</div>;
         }
+      `,
+      features: ['types'],
+    },
+    {
+      code: `
+        import type { FieldProps } from 'redux-form';
+
+        type Props = FieldProps & {
+          name: string,
+          type: string,
+          label?: string,
+          placeholder?: string,
+          disabled?: boolean,
+        };
+
+        TextField.defaultProps = {
+          label: '',
+          placeholder: '',
+          disabled: false,
+        };
       `,
       features: ['types'],
     },
@@ -1733,6 +1753,33 @@ ruleTester.run('default-props-match-prop-types', rule, {
           data: { name: 'frob' },
           line: 17,
           column: 44,
+        },
+      ],
+    },
+    {
+      code: `
+        export type SharedProps = {|
+            disabled: boolean,
+        |};
+
+        type Props = {|
+            ...SharedProps,
+            focused?: boolean,
+        |};
+
+        class Foo extends React.Component<Props> {
+            static defaultProps = {
+              disabled: false
+            };
+        };
+      `,
+      features: ['flow'],
+      errors: [
+        {
+          messageId: 'requiredHasDefault',
+          data: {
+            name: 'disabled',
+          },
         },
       ],
     },

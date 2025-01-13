@@ -4,7 +4,9 @@
 
 'use strict';
 
-const RuleTester = require('eslint').RuleTester;
+const semver = require('semver');
+const tsEslintVersion = require('@typescript-eslint/parser/package.json').version;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/no-unused-state');
 
 const parsers = require('../../helpers/parsers');
@@ -26,7 +28,7 @@ function getErrorMessages(unusedFields) {
 }
 
 eslintTester.run('no-unused-state', rule, {
-  valid: parsers.all([
+  valid: parsers.all([].concat(
     {
       code: `
         function StatelessFnUnaffectedTest(props) {
@@ -351,9 +353,6 @@ eslintTester.run('no-unused-state', rule, {
         }
       `,
       features: ['optional chaining'],
-      parserOptions: {
-        ecmaVersion: 2020,
-      },
     },
     {
       code: `
@@ -984,7 +983,135 @@ eslintTester.run('no-unused-state', rule, {
       `,
       features: ['ts', 'no-babel'],
     },
-  ]),
+    semver.satisfies(tsEslintVersion, '>= 5') ? {
+      code: `
+        interface Props {}
+
+        interface State {
+          flag: boolean;
+        }
+
+        export default class RuleTest extends React.Component<Props, State> {
+          readonly state: State = {
+            flag: false,
+          };
+
+          static getDerivedStateFromProps = (props: Props, state: State) => {
+            const newState: Partial<State> = {};
+            if (!state.flag) {
+              newState.flag = true;
+            }
+            return newState;
+          };
+        }
+      `,
+      features: ['ts', 'no-babel-old', 'no-ts-old'],
+    } : [],
+    {
+      code: `
+        class Foo extends React.Component {
+          onCancel = (data) => {
+            console.log('Cancelled', data)
+            this.setState({ status: 'Cancelled. Try again?' })
+          }
+          render() {
+            const { status } = this.state;
+            return <div>{status}</div>
+          }
+        }
+      `,
+      features: ['class fields'],
+    },
+    {
+      code: `
+        class KarmaRefundPillComponent extends GenericPillComponent {
+          renderContent = () => {
+            const { action } = this.props
+
+            return (
+              <Box fontSize={[1]} mx={[2]} minWidth="10px" minHeight="26px" alignItems="center">
+                <FormattedText
+                  fields={getKarmaClaimLevel1Fields(action)}
+                  i18nKey="pillTemplates.karmarefund.summary"
+                  fontSize={[1]}
+                />
+              </Box>
+            )
+          }
+        }
+      `,
+      features: ['ts'],
+    },
+    {
+      code: `
+        class AutoControlledComponent<P = {}, S = {}> extends UIComponent<P, S> {
+          static getDerivedStateFromProps: React.GetDerivedStateFromProps<any, any>
+        }
+      `,
+      features: ['types'],
+    },
+    {
+      code: `
+        export const commonMixinWrapper = ComposeComponent => class extends ComposeComponent {
+          static getDerivedStateFromProps = ComposeComponent.getDerivedStateFromProps;
+          render() { return <div />; }
+        }
+      `,
+      features: ['class fields'],
+      parserOptions: {
+        sourceType: 'module',
+      },
+    },
+    {
+      code: `
+        import React, { PureComponent } from 'react';
+
+        class TestNoUnusedState extends React.Component {
+          constructor(props) {
+            super(props);
+            this.state = {
+              id: null,
+            };
+          }
+
+          static getDerivedStateFromProps = (props, state) => {
+            if (state.id !== props.id) {
+              return {
+                id: props.id,
+              };
+            }
+
+            return null;
+          };
+
+          render() {
+            return <h1>{this.state.id}</h1>;
+          }
+        }
+
+        export default TestNoUnusedState;
+      `,
+      features: ['class fields'],
+      parserOptions: {
+        sourceType: 'module',
+      },
+    },
+    {
+      code: `
+        class Component extends React.Component {
+          static getDerivedStateFromProps = ({value, disableAnimation}: ToggleProps, {isControlled, isOn}: ToggleState) => {
+            return { isControlled, isOn };
+          };
+
+          render() {
+            const { isControlled, isOn } = this.state;
+            return <div>{isControlled ? 'controlled' : ''}{isOn ? 'on' : ''}</div>;
+          }
+        }
+      `,
+      features: ['types', 'class fields'],
+    }
+  )),
 
   invalid: parsers.all([
     {

@@ -8,7 +8,7 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/forbid-elements');
 
 const parsers = require('../../helpers/parsers');
@@ -81,6 +81,9 @@ ruleTester.run('forbid-elements', rule, {
     {
       code: 'React.createElement(1)',
       options: [{ forbid: ['button'] }],
+    },
+    {
+      code: 'React.createElement()',
     },
   ]),
 

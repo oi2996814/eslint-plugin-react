@@ -10,7 +10,7 @@
 
 const babelEslintVersion = require('babel-eslint/package.json').version;
 const semver = require('semver');
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 
 const rule = require('../../../lib/rules/forbid-prop-types');
 
@@ -626,6 +626,91 @@ ruleTester.run('forbid-prop-types', rule, {
         const Bar = {
           bar: PropTypes.shape(Foo),
         };
+      `,
+    },
+    {
+      code: `
+        import yup from "yup"
+        const formValidation = Yup.object().shape({
+          name: Yup.string(),
+          customer_ids: Yup.array()
+        });
+      `,
+    },
+    {
+      code: `
+        import yup from "Yup"
+        const validation = yup.object().shape({
+          address: yup.object({
+            city: yup.string(),
+            zip: yup.string(),
+          })
+        })
+      `,
+      options: [
+        {
+          forbid: ['string', 'object'],
+        },
+      ],
+    },
+    {
+      code: `
+        import yup from "yup"
+        Yup.array(
+          Yup.object().shape({
+            value: Yup.number()
+          })
+        )
+      `,
+      options: [{ forbid: ['number'] }],
+    },
+    {
+      code: `
+        import CustomPropTypes from "prop-types";
+        class Component extends React.Component {};
+        Component.propTypes = {
+          a: CustomPropTypes.shape({
+            b: CustomPropTypes.String,
+            c: CustomPropTypes.number.isRequired,
+          })
+        }
+      `,
+    },
+    {
+      code: `
+        import CustomReact from "react"
+        class Component extends React.Component {};
+        Component.propTypes = {
+          b: CustomReact.PropTypes.string,
+        }
+      `,
+    },
+    {
+      code: `
+        import PropTypes from "yup"
+        class Component extends React.Component {};
+        Component.propTypes = {
+          b: PropTypes.array(),
+        }
+      `,
+    },
+    {
+      code: `
+        import { PropTypes, shape, any } from "yup"
+        class Component extends React.Component {};
+        Component.propTypes = {
+          b: PropTypes.any,
+        }
+      `,
+      options: [{ forbid: ['any'] }],
+    },
+    {
+      code: `
+        import { PropTypes } from "not-react"
+        class Component extends React.Component {};
+        Component.propTypes = {
+          b: PropTypes.array(),
+        }
       `,
     }
   )),
@@ -1718,6 +1803,107 @@ ruleTester.run('forbid-prop-types', rule, {
         });
       `,
       errors: 1,
+    },
+    {
+      code: `
+        import React from './React';
+
+        import { arrayOf, object } from 'prop-types';
+
+        const App = ({ foo }) => (
+          <div>
+            Hello world {foo}
+          </div>
+        );
+
+        App.propTypes = {
+          foo: arrayOf(object)
+        }
+
+        export default App;
+      `,
+      errors: [
+        {
+          messageId: 'forbiddenPropType',
+          data: { target: 'object' },
+        },
+      ],
+    },
+    {
+      code: `
+        import React from './React';
+
+        import PropTypes, { arrayOf } from 'prop-types';
+
+        const App = ({ foo }) => (
+          <div>
+            Hello world {foo}
+          </div>
+        );
+
+        App.propTypes = {
+          foo: arrayOf(PropTypes.object)
+        }
+
+        export default App;
+      `,
+      errors: [
+        {
+          messageId: 'forbiddenPropType',
+          data: { target: 'object' },
+        },
+      ],
+    },
+    {
+      code: `
+        import CustomPropTypes from "prop-types";
+        class Component extends React.Component {};
+        Component.propTypes = {
+          a: CustomPropTypes.shape({
+            b: CustomPropTypes.String,
+            c: CustomPropTypes.object.isRequired,
+          })
+        }
+      `,
+      errors: [
+        {
+          messageId: 'forbiddenPropType',
+          data: { target: 'object' },
+        },
+      ],
+    },
+    {
+      code: `
+        import { PropTypes as CustomPropTypes } from "react";
+        class Component extends React.Component {};
+        Component.propTypes = {
+          a: CustomPropTypes.shape({
+            b: CustomPropTypes.String,
+            c: CustomPropTypes.object.isRequired,
+          })
+        }
+      `,
+      errors: [
+        {
+          messageId: 'forbiddenPropType',
+          data: { target: 'object' },
+        },
+      ],
+    },
+    {
+      code: `
+        import CustomReact from "react"
+        class Component extends React.Component {};
+        Component.propTypes = {
+          b: CustomReact.PropTypes.object,
+        }
+      `,
+      errors: [
+        {
+          messageId: 'forbiddenPropType',
+          data: { target: 'object' },
+        },
+      ],
     },
   ]),
 });

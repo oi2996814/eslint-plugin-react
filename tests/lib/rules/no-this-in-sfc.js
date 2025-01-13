@@ -8,7 +8,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/no-this-in-sfc');
 
 const parsers = require('../../helpers/parsers');
@@ -180,7 +180,7 @@ ruleTester.run('no-this-in-sfc', rule, {
       code: `
         $.fn.getValueAsStringWeak = function (): string | null {
           const val = this.length === 1 ? this.val() : null;
-        
+
           return typeof val === 'string' ? val : null;
         };
       `,
@@ -274,59 +274,6 @@ ruleTester.run('no-this-in-sfc', rule, {
         { messageId: 'noThisInSFC' },
         { messageId: 'noThisInSFC' },
       ],
-    },
-    {
-      code: `
-        class Foo {
-          bar() {
-            return () => {
-              this.something();
-              return null;
-            }
-          }
-        }
-      `,
-      errors: [{ messageId: 'noThisInSFC' }],
-    },
-    {
-      code: `
-        class Foo {
-          bar = () => () => {
-            this.something();
-            return null;
-          };
-        }
-      `,
-      features: ['class fields', 'no-ts-old'], // TODO: FIXME: remove `no-ts-old` and fix
-      errors: [{ messageId: 'noThisInSFC' }],
-    },
-    {
-      code: `
-        class Foo {
-          bar() {
-            function Bar(){
-              return () => {
-                this.something();
-                return null;
-              }
-            }
-          }
-        }
-      `,
-      errors: [{ messageId: 'noThisInSFC' }],
-    },
-    {
-      code: `
-        class Foo {
-          bar() {
-            () => () => {
-              this.something();
-              return null;
-            };
-          }
-        }
-      `,
-      errors: [{ messageId: 'noThisInSFC' }],
     },
   ]),
 });

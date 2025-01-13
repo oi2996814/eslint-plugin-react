@@ -9,7 +9,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/jsx-indent-props');
 
 const parsers = require('../../helpers/parsers');
@@ -302,6 +302,37 @@ ruleTester.run('jsx-indent-props', rule, {
           ignoreTernaryOperator: true,
         },
       ],
+    },
+    {
+      code: `
+        <a
+          role={'button'}
+          className={\`navbar-burger \${open ? 'is-active' : ''}\`}
+          href={'#'}
+          aria-label={'menu'}
+          aria-expanded={false}
+          onClick={openMenu}>
+          <span aria-hidden={'true'}/>
+          <span aria-hidden={'true'}/>
+          <span aria-hidden={'true'}/>
+        </a>
+      `,
+      options: [{ indentMode: 2 }],
+    },
+    {
+      code: `
+        <a role={'button'}
+           className={\`navbar-burger \${open ? 'is-active' : ''}\`}
+           href={'#'}
+           aria-label={'menu'}
+           aria-expanded={false}
+           onClick={openMenu}>
+          <span aria-hidden={'true'}/>
+          <span aria-hidden={'true'}/>
+          <span aria-hidden={'true'}/>
+        </a>
+      `,
+      options: ['first'],
     },
   ]),
 

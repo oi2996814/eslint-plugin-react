@@ -1,7 +1,7 @@
 'use strict';
 
-const path = require('path');
 const semver = require('semver');
+const entries = require('object.entries');
 const version = require('eslint/package.json').version;
 const flatMap = require('array.prototype.flatmap');
 const tsParserVersion = require('@typescript-eslint/parser/package.json').version;
@@ -10,14 +10,33 @@ const disableNewTS = semver.satisfies(tsParserVersion, '>= 4.1') // this rule is
   ? (x) => Object.assign({}, x, { features: [].concat(x.features, 'no-ts-new') })
   : (x) => x;
 
-const NODE_MODULES = '../../node_modules';
+function minEcmaVersion(features, parserOptions) {
+  const minEcmaVersionForFeatures = {
+    'class fields': 2022,
+    'optional chaining': 2020,
+    'nullish coalescing': 2020,
+  };
+  const result = Math.max.apply(
+    Math,
+    [].concat(
+      (parserOptions && parserOptions.ecmaVersion) || [],
+      flatMap(entries(minEcmaVersionForFeatures), (entry) => {
+        const f = entry[0];
+        const y = entry[1];
+        return features.has(f) ? y : [];
+      })
+    ).map((y) => (y > 5 && y < 2015 ? y + 2009 : y)) // normalize editions to years
+  );
+  return Number.isFinite(result) ? result : undefined;
+}
 
 const parsers = {
-  BABEL_ESLINT: path.join(__dirname, NODE_MODULES, 'babel-eslint'),
-  '@BABEL_ESLINT': path.join(__dirname, NODE_MODULES, '@babel/eslint-parser'),
-  TYPESCRIPT_ESLINT: path.join(__dirname, NODE_MODULES, 'typescript-eslint-parser'),
-  '@TYPESCRIPT_ESLINT': path.join(__dirname, NODE_MODULES, '@typescript-eslint/parser'),
+  BABEL_ESLINT: require.resolve('babel-eslint'),
+  '@BABEL_ESLINT': require.resolve('@babel/eslint-parser'),
+  TYPESCRIPT_ESLINT: require.resolve('typescript-eslint-parser'),
+  '@TYPESCRIPT_ESLINT': require.resolve('@typescript-eslint/parser'),
   disableNewTS,
+  skipDueToMultiErrorSorting: semver.satisfies(process.versions.node, '^8 || ^9'),
   babelParserOptions: function parserOptions(test, features) {
     return Object.assign({}, test.parserOptions, {
       requireConfigFile: false,
@@ -57,14 +76,16 @@ const parsers = {
       }
       const features = new Set([].concat(test.features || []));
       delete test.features;
-      const es = test.parserOptions && test.parserOptions.ecmaVersion;
+
+      const es = minEcmaVersion(features, test.parserOptions);
 
       function addComment(testObject, parser) {
         const extras = [].concat(
           `features: [${Array.from(features).join(',')}]`,
           `parser: ${parser}`,
           testObject.parserOptions ? `parserOptions: ${JSON.stringify(testObject.parserOptions)}` : [],
-          testObject.options ? `options: ${JSON.stringify(testObject.options)}` : []
+          testObject.options ? `options: ${JSON.stringify(testObject.options)}` : [],
+          testObject.settings ? `settings: ${JSON.stringify(testObject.settings)}` : []
         );
 
         const extraComment = `\n// ${extras.join(', ')}`;
@@ -81,7 +102,7 @@ const parsers = {
           && {
             errors: testObject.errors.map(
               (errorObject) => {
-                const nextSuggestions = errorObject.suggestions && {
+                const nextSuggestions = errorObject.suggestions && typeof errorObject.suggestions !== 'number' && {
                   suggestions: errorObject.suggestions.map((suggestion) => Object.assign({}, suggestion, {
                     output: suggestion.output + extraComment,
                   })),
@@ -113,14 +134,17 @@ const parsers = {
         || (features.has('fragment') && semver.satisfies(version, '< 5'));
 
       const skipBabel = features.has('no-babel');
-      const skipOldBabel = skipBabel || features.has('no-babel-old') || semver.satisfies(version, '>= 8');
+      const skipOldBabel = skipBabel
+        || features.has('no-babel-old')
+        || features.has('optional chaining')
+        || semver.satisfies(version, '>= 8');
       const skipNewBabel = skipBabel
         || features.has('no-babel-new')
         || !semver.satisfies(version, '^7.5.0') // require('@babel/eslint-parser/package.json').peerDependencies.eslint
         || features.has('flow')
         || features.has('types')
         || features.has('ts');
-      const skipTS = semver.satisfies(version, '< 5')
+      const skipTS = semver.satisfies(version, '<= 5') // TODO: make these pass on eslint 5
         || features.has('no-ts')
         || features.has('flow')
         || features.has('jsx namespace')
@@ -131,10 +155,8 @@ const parsers = {
 
       return [].concat(
         skipBase ? [] : addComment(
-          Object.assign({}, test, features.has('class fields') && {
-            parserOptions: Object.assign({}, test.parserOptions, {
-              ecmaVersion: Math.max((test.parserOptions && test.parserOptions.ecmaVersion) || 0, 2022),
-            }),
+          Object.assign({}, test, typeof es === 'number' && {
+            parserOptions: Object.assign({}, test.parserOptions, { ecmaVersion: es }),
           }),
           'default'
         ),
@@ -147,9 +169,10 @@ const parsers = {
           parserOptions: parsers.babelParserOptions(test, features),
         }), '@babel/eslint-parser'),
         tsOld ? addComment(Object.assign({}, test, { parser: parsers.TYPESCRIPT_ESLINT }), 'typescript-eslint') : [],
-        tsNew ? addComment(Object.assign({}, test, { parser: parsers['@TYPESCRIPT_ESLINT'] }), '@typescript/eslint') : []
+        tsNew ? addComment(Object.assign({}, test, { parser: parsers['@TYPESCRIPT_ESLINT'] }), '@typescript-eslint/parser') : []
       );
     });
+
     return t;
   },
 };

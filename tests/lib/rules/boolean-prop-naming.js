@@ -9,7 +9,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/boolean-prop-naming');
 
 const parsers = require('../../helpers/parsers');
@@ -415,7 +415,103 @@ ruleTester.run('boolean-prop-naming', rule, {
       `,
       options: [{ rule: '^is[A-Z]([A-Za-z0-9]?)+' }],
       features: ['ts'],
-      errors: [],
+    },
+    {
+      code: `
+        type Props = {
+          isEnabled: boolean
+        } & OtherProps
+        const HelloNew = (props: Props) => { return <div /> };
+      `,
+      options: [{ rule: '^is[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['types'],
+    },
+    {
+      code: `
+        type Props = {
+          isEnabled: boolean
+        } & {
+          hasLOL: boolean
+        } & OtherProps
+        const HelloNew = (props: Props) => { return <div /> };
+      `,
+      options: [{ rule: '(is|has)[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['types'],
+    },
+    {
+      code: `
+        type Props = {
+          isEnabled: boolean
+        }
+
+        const HelloNew: React.FC<Props> = (props) => { return <div /> };
+      `,
+      options: [{ rule: '^is[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['types'],
+    },
+    {
+      code: `
+        type Props = {
+          isEnabled: boolean
+        } & {
+          hasLOL: boolean
+        }
+
+        const HelloNew: React.FC<Props> = (props) => { return <div /> };
+      `,
+      options: [{ rule: '^(is|has)[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['types'],
+    },
+    {
+      code: `
+        type Props = {
+          isEnabled: boolean
+        } | {
+          hasLOL: boolean
+        }
+
+        const HelloNew = (props: Props) => { return <div /> };
+      `,
+      options: [{ rule: '^(is|has)[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['types'],
+    },
+    {
+      code: `
+        type Props = {
+          isEnabled: boolean
+        } & ({
+          hasLOL: boolean
+        } | {
+          isLOL: boolean
+        })
+
+        const HelloNew = (props: Props) => { return <div /> };
+      `,
+      options: [{ rule: '^(is|has)[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['types'],
+    },
+    {
+      code: `
+        export const DataRow = (props: { label: string; value: string; } & React.HTMLAttributes<HTMLDivElement>) => {
+            const { label, value, ...otherProps } = props;
+            return (
+                <div {...otherProps}>
+                    <span>{label}</span>
+                    <span>{value}</span>
+                </div>
+            );
+        };
+      `,
+      options: [{ rule: '(^(is|has|should|without)[A-Z]([A-Za-z0-9]?)+|disabled|required|checked|defaultChecked)' }],
+      features: ['types'],
+    },
+    {
+      code: `
+        // Strip @jsx comments, see https://github.com/microsoft/fluentui/issues/29126
+        const resultCode = result.code
+          .replace('/** @jsxRuntime automatic */', '')
+          .replace('/** @jsxImportSource @fluentui/react-jsx-runtime */', '');
+      `,
     },
   ]),
 
@@ -1026,12 +1122,16 @@ ruleTester.run('boolean-prop-naming', rule, {
           enabled: boolean
         }
         const HelloNew = (props: TestConstType) => { return <div /> };
-    `,
+      `,
       options: [{ rule: '^is[A-Z]([A-Za-z0-9]?)+' }],
       features: ['ts', 'no-ts-old'],
       errors: [
         {
-          message: 'Prop name (enabled) doesn\'t match rule (^is[A-Z]([A-Za-z0-9]?)+)',
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'enabled',
+            pattern: '^is[A-Z]([A-Za-z0-9]?)+',
+          },
         },
       ],
     },
@@ -1041,12 +1141,245 @@ ruleTester.run('boolean-prop-naming', rule, {
           enabled: boolean
         }
         const HelloNew = (props: TestFNType) => { return <div /> };
-    `,
+      `,
       options: [{ rule: '^is[A-Z]([A-Za-z0-9]?)+' }],
       features: ['ts', 'no-ts-old'],
       errors: [
         {
-          message: 'Prop name (enabled) doesn\'t match rule (^is[A-Z]([A-Za-z0-9]?)+)',
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'enabled',
+            pattern: '^is[A-Z]([A-Za-z0-9]?)+',
+          },
+        },
+      ],
+    },
+    {
+      code: `
+        type Props = {
+          enabled: boolean
+        } & OtherProps
+
+        const HelloNew = (props: Props) => { return <div /> };
+      `,
+      options: [{ rule: '^is[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['types', 'no-ts-old'],
+      errors: [
+        {
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'enabled',
+            pattern: '^is[A-Z]([A-Za-z0-9]?)+',
+          },
+        },
+      ],
+    },
+    {
+      code: `
+        type Props = {
+          enabled: boolean
+        } & {
+          hasLOL: boolean
+        } & OtherProps
+
+        const HelloNew = (props: Props) => { return <div /> };
+      `,
+      options: [{ rule: '^(is|has)[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['types', 'no-ts-old'],
+      errors: [
+        {
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'enabled',
+            pattern: '^(is|has)[A-Z]([A-Za-z0-9]?)+',
+          },
+        },
+      ],
+    },
+    {
+      code: `
+        type Props = {
+          enabled: boolean
+        }
+
+        const HelloNew: React.FC<Props> = (props) => { return <div /> };
+      `,
+      options: [{ rule: '^is[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['types', 'no-ts-old'],
+      errors: [
+        {
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'enabled',
+            pattern: '^is[A-Z]([A-Za-z0-9]?)+',
+          },
+        },
+      ],
+    },
+    {
+      code: `
+        type Props = {
+          enabled: boolean
+        } & {
+          hasLOL: boolean
+        }
+
+        const HelloNew: React.FC<Props> = (props) => { return <div /> };
+      `,
+      options: [{ rule: '^(is|has)[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['types', 'no-ts-old'],
+      errors: [
+        {
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'enabled',
+            pattern: '^(is|has)[A-Z]([A-Za-z0-9]?)+',
+          },
+        },
+      ],
+    },
+    {
+      code: `
+        type Props = {
+          enabled: boolean
+        } | {
+          hasLOL: boolean
+        }
+
+        const HelloNew = (props: Props) => { return <div /> };
+      `,
+      options: [{ rule: '^(is|has)[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['types', 'no-ts-old'],
+      errors: [
+        {
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'enabled',
+            pattern: '^(is|has)[A-Z]([A-Za-z0-9]?)+',
+          },
+        },
+      ],
+    },
+    {
+      code: `
+        type Props = {
+          enabled: boolean
+        } & ({
+          hasLOL: boolean
+        } | {
+          lol: boolean
+        })
+
+        const HelloNew = (props: Props) => { return <div /> };
+      `,
+      options: [{ rule: '^(is|has)[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['types', 'no-ts-old'],
+      errors: [
+        {
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'enabled',
+            pattern: '^(is|has)[A-Z]([A-Za-z0-9]?)+',
+          },
+        },
+        {
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'lol',
+            pattern: '^(is|has)[A-Z]([A-Za-z0-9]?)+',
+          },
+        },
+      ],
+    },
+    {
+      code: `
+        interface TestFNType {
+          enabled: boolean
+        }
+        const HelloNew = (props: TestFNType) => { return <div /> };
+      `,
+      options: [{ rule: '^is[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['ts', 'no-babel'],
+      errors: [
+        {
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'enabled',
+            pattern: '^is[A-Z]([A-Za-z0-9]?)+',
+          },
+        },
+      ],
+    },
+    {
+      code: 'const Hello = (props: {enabled:boolean}) => <div />;',
+      options: [{ rule: '^(is|has)[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['ts', 'no-babel'],
+      errors: [
+        {
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'enabled',
+            pattern: '^(is|has)[A-Z]([A-Za-z0-9]?)+',
+          },
+        },
+      ],
+    },
+    {
+      code: `
+        type Props = {
+          enabled: boolean
+        };
+        type BaseProps = {
+          semi: boolean
+        };
+
+        const Hello = (props: Props & BaseProps) => <div />;
+      `,
+      options: [{ rule: '^(is|has)[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['ts', 'no-babel', 'no-ts-old'],
+      errors: [
+        {
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'enabled',
+            pattern: '^(is|has)[A-Z]([A-Za-z0-9]?)+',
+          },
+        },
+        {
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'semi',
+            pattern: '^(is|has)[A-Z]([A-Za-z0-9]?)+',
+          },
+        },
+      ],
+    },
+    {
+      code: `
+        type Props = {
+          enabled: boolean
+        };
+
+        const Hello = (props: Props & {
+          semi: boolean
+        }) => <div />;
+      `,
+      options: [{ rule: '^(is|has)[A-Z]([A-Za-z0-9]?)+' }],
+      features: ['ts', 'no-babel', 'no-ts-old'],
+      errors: [
+        {
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'enabled',
+            pattern: '^(is|has)[A-Z]([A-Za-z0-9]?)+',
+          },
+        },
+        {
+          messageId: 'patternMismatch',
+          data: {
+            propName: 'semi',
+            pattern: '^(is|has)[A-Z]([A-Za-z0-9]?)+',
+          },
         },
       ],
     },

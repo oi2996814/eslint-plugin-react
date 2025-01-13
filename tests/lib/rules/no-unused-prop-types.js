@@ -12,7 +12,7 @@
 const semver = require('semver');
 const eslintPkg = require('eslint/package.json');
 const babelEslintVersion = require('babel-eslint/package.json').version;
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 
 require('object.entries/auto'); // for node 6, eslint 5, new TS parser, `function Hello({firstname}: Props): React$Element {` cases
 
@@ -807,9 +807,6 @@ ruleTester.run('no-unused-prop-types', rule, {
         };
       `,
       features: ['optional chaining'],
-      parserOptions: {
-        ecmaVersion: 2020,
-      },
     },
     {
       code: `
@@ -839,9 +836,6 @@ ruleTester.run('no-unused-prop-types', rule, {
         module.exports = HelloComponent();
       `,
       features: ['optional chaining'],
-      parserOptions: {
-        ecmaVersion: 2020,
-      },
     },
     {
       code: `
@@ -871,9 +865,6 @@ ruleTester.run('no-unused-prop-types', rule, {
         module.exports = HelloComponent();
       `,
       features: ['optional chaining'],
-      parserOptions: {
-        ecmaVersion: 2020,
-      },
     },
     {
       code: `
@@ -926,9 +917,6 @@ ruleTester.run('no-unused-prop-types', rule, {
         };
       `,
       features: ['optional chaining'],
-      parserOptions: {
-        ecmaVersion: 2020,
-      },
     },
     {
       code: `
@@ -2048,7 +2036,7 @@ ruleTester.run('no-unused-prop-types', rule, {
       `,
     },
     {
-      // The next two test cases are related to: https://github.com/yannickcr/eslint-plugin-react/issues/1183
+      // The next two test cases are related to: https://github.com/jsx-eslint/eslint-plugin-react/issues/1183
       code: `
         export default function SomeComponent(props) {
             const callback = () => {
@@ -2375,7 +2363,7 @@ ruleTester.run('no-unused-prop-types', rule, {
       features: ['class fields'],
     },
     {
-      // Destrucuted props inside of async class method
+      // Destructured props inside of async class method
       code: `
         export class Example extends Component {
           static propTypes = {
@@ -3825,6 +3813,141 @@ ruleTester.run('no-unused-prop-types', rule, {
       `,
       features: ['types'],
     },
+    {
+      code: `
+        type Props = {
+          history: {
+            push: Function,
+          },
+          match?: {
+            params?: {
+              date?: string
+            },
+          },
+        };
+
+        export const Daily = ({ history, match: {
+          params: {
+            date = moment().toISOString(),
+          } = {},
+        } = {} }: Props) => (
+              <div>
+                <div style={{ textAlign: 'right', paddingRight: '25px' }}>
+                  Show <DatePicker
+                    selected={moment(date)}
+                    className="datetime"
+                    onChange={d => history.push(\`./\${d.toISOString()}\`)}
+                  />
+                </div>
+                <WithData url="/payments/daily" body={{ date: moment(date).toISOString() }}>
+                  <Flashcards date={moment(date)} />
+                </WithData>
+              </div>
+        );
+      `,
+      features: ['types'],
+    },
+    {
+      code: `
+        import React from 'react';
+
+        type Props = {
+          test: string,
+          callback: () => void,
+        };
+
+        export default function Foo(props: Props) {
+          return (
+            <div>
+              {[1, 2, 3].map(e => (
+                <div key={e} onClick={() => props.callback()}>
+                  {props.test}
+                </div>
+              ))}
+            </div>
+          );
+        }
+      `,
+      features: ['types'],
+    },
+    {
+      code: `
+        class Component extends Component <{}, {updateQueue: Array<string>}> {
+          debouncedUpdate = debounce((cellsetId, options) => {
+            this.setState((prevState, props) => {
+              const {updateQueue} = prevState;
+              const {updateCells} = props;
+              updateCells(cellsetId, updateQueue, options);
+              return {
+                updateQueue: [],
+              };
+            });
+          }, 2000);
+
+          render() {
+            return <div />
+          }
+        }
+      `,
+      features: ['class fields', 'types'],
+    },
+    {
+      code: `
+        class Test extends Component<{}, {selectedId: string}> {
+          constructor(props: *) {
+            super(props);
+            this.state = {
+              selectedId: '',
+            };
+          }
+
+          onChange = ({id}: {id: string}) => { // This will say: 'id' PropType is defined but prop is never used (react/no-unused-prop-types)
+            this.setState({
+              selectedId: id,
+            });
+          };
+
+          render() {
+            const {selectedId} = this.state;
+            return (
+              <div>
+                {selectedId}
+                <select onChange={() => this.onChange({id: '1'})}>
+                  <option value='1'>1</option>
+                </select>
+              </div>
+            );
+          }
+        }
+      `,
+      features: ['class fields', 'types'],
+    },
+    {
+      code: `
+        function Foo (props) {
+          return <div>{ renderPhoto() }</div>;
+
+          function renderPhoto () {
+            return <div>{ props.renderPhotoTools() }</div>;
+          }
+        }
+      `,
+    },
+    {
+      code: `
+        const Wrapper = featureToggle
+        ? ({ children }: { children: Node }) => (
+          <FeatureToggledComponent
+              featureToggle={featureToggle}
+              defaultValue
+          >
+              {children}
+          </FeatureToggledComponent>
+        )
+        : React.Fragment;
+      `,
+      features: ['types'],
+    },
   ]),
 
   invalid: parsers.all([].concat(
@@ -4338,6 +4461,43 @@ ruleTester.run('no-unused-prop-types', rule, {
     {
       code: `
         /** @jsx Foo */
+        class Test extends Foo.Component {
+          render() {
+            return (
+              <div>{this.props.firstname} {this.props.lastname}</div>
+            );
+          }
+        }
+        Test.propTypes = {
+          unused: PropTypes.string
+        };
+      `,
+      errors: [{ message: '\'unused\' PropType is defined but prop is never used' }],
+    },
+    {
+      code: `
+        /** @jsx Foo */
+        /** @jsx React */
+        class Test extends Foo.Component {
+          render() {
+            return (
+              <div>{this.props.firstname} {this.props.lastname}</div>
+            );
+          }
+        }
+        Test.propTypes = {
+          unused: PropTypes.string
+        };
+      `,
+      errors: [{ message: '\'unused\' PropType is defined but prop is never used' }],
+    },
+    {
+      code: `
+        /**
+         * Copyright ....
+         * @jsx Foo
+         */
+        /** @jsx React */
         class Test extends Foo.Component {
           render() {
             return (
@@ -6486,6 +6646,69 @@ ruleTester.run('no-unused-prop-types', rule, {
         };
       `,
       errors: [{ message: '\'foo\' PropType is defined but prop is never used' }],
+    },
+
+    {
+      code: `
+        interface Props {
+          readonly firstname: string;
+          readonly lastname: string;
+        }
+
+        class TestComponent extends React.Component<Props> {
+          public render() {
+            return <div>{this.props.firstname}</div>;
+          }
+        }
+      `,
+      features: ['ts', 'no-babel'],
+      errors: [{ message: '\'lastname\' PropType is defined but prop is never used' }],
+    },
+
+    {
+      code: `
+        import React from "react";
+
+        var Hello = React.createClass({
+          propTypes: {
+            name: React.PropTypes.string,
+            foo: React.PropTypes.string,
+            propTypes: React.PropTypes.string
+          },
+          render: function() {
+            return <div>Hello {this.props.name}</div>;
+          }
+        });
+      `,
+      settings: {
+        react: {
+          createClass: 'createClass',
+        },
+      },
+      errors: [
+        { message: '\'foo\' PropType is defined but prop is never used' },
+        { message: '\'propTypes\' PropType is defined but prop is never used' },
+      ],
+    },
+    {
+      code: `
+        import React from "react";
+
+        type props = {
+          foo: string;
+          bar: string;
+        };
+
+        const Demo: React.FC<props> = ({ foo }) => {
+          return <div {...{}}>{foo}</div>;
+        };
+
+        export default Demo;
+      `,
+      features: ['ts', 'no-babel'],
+      errors: [
+        { message: '\'bar\' PropType is defined but prop is never used' },
+      ],
     }
   )),
 });

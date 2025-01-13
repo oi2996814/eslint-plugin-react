@@ -9,7 +9,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/sort-comp');
 
 const parsers = require('../../helpers/parsers');
@@ -691,6 +691,32 @@ ruleTester.run('sort-comp', rule, {
             'static-variables',
             'instance-variables',
             'constructor',
+            'everything-else',
+            'render',
+          ],
+        },
+      ],
+    },
+    {
+      code: `
+        class ClassName extends React.Component {
+          static defaultProps = {};
+          static parseDateString(date?: Date) {}
+          state = {};
+          render() {
+            return <div />;
+          }
+        }
+      `,
+      features: ['types'],
+      options: [
+        {
+          order: [
+            'static-variables',
+            'static-methods',
+            'type-annotations',
+            'instance-variables',
+            'lifecycle',
             'everything-else',
             'render',
           ],

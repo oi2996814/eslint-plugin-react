@@ -5,7 +5,7 @@
 
 'use strict';
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/require-optimization');
 
 const parsers = require('../../helpers/parsers');
@@ -47,7 +47,7 @@ ruleTester.run('react-require-optimization', rule, {
         import React, {Component} from "react";
         @reactMixin.decorate(PureRenderMixin)
         class YourComponent extends Component {
-          componetnDidMount () {}
+          componentDidMount () {}
           render() {}
         }
       `,

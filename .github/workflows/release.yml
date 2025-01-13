@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    if: github.event.repository.fork == false
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          allowed-endpoints:
+            api.github.com:443
+            github.com:443
+            raw.githubusercontent.com:443
+            nodejs.org:443
+            registry.npmjs.org:443
+
+      - name: Get version from tag
+        id: tag_name
+        run: echo "current_version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - uses: actions/checkout@v4
+
+      - uses: ljharb/actions/node/install@main
+        with:
+          node-version: node
+          skip-install: true
+          skip-ls-check: true
+
+      - uses: mindsers/changelog-reader-action@v2
+        id: changelog_reader
+        with:
+          version: ${{ steps.tag_name.outputs.current_version }}
+
+      - name: Get common links from changelog
+        id: changelog
+        run: |
+          # Parse the changelog for common links
+          _links="$(egrep '^\[.*]:.+' ${GITHUB_WORKSPACE:-.}/CHANGELOG.md | sort -u)"
+          _links="${_links//'%'/'%25'}"
+          # _links="${_links//$'\n'/'%0A'}"
+          _links="${_links//$'\r'/'%0D'}"
+          # Set output 'links' to $_links
+          DELIMITER=$(uuidgen)
+          echo "links<<${DELIMITER}" >> "${GITHUB_OUTPUT}"
+          echo "$_links" >> "${GITHUB_OUTPUT}"
+          echo "${DELIMITER}" >> "${GITHUB_OUTPUT}"
+
+      - name: 'concat data > tmp.md'
+        run: |
+          cat << 'EOF' > tmp.md
+          ${{ steps.changelog_reader.outputs.changes }}
+          ${{ steps.changelog.outputs.links }}
+          EOF
+
+      - run: cat tmp.md
+
+      - id: prune-footnotes
+        run: |
+          DELIMITER=$(uuidgen)
+          echo "body<<${DELIMITER}" >> "${GITHUB_OUTPUT}"
+          npx gfm-footnotes -i tmp.md >> "${GITHUB_OUTPUT}"
+          echo "${DELIMITER}" >> "${GITHUB_OUTPUT}"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            ${{ steps.prune-footnotes.outputs.body }}

@@ -9,7 +9,7 @@
 // Requirements
 // ------------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/jsx-one-expression-per-line');
 
 const parsers = require('../../helpers/parsers');
@@ -156,6 +156,22 @@ ruleTester.run('jsx-one-expression-per-line', rule, {
       options: [{ allow: 'single-child' }],
     },
     {
+      code: '<App>123</App>',
+      options: [{ allow: 'non-jsx' }],
+    },
+    {
+      code: '<App>foo</App>',
+      options: [{ allow: 'non-jsx' }],
+    },
+    {
+      code: '<App>{"foo"}</App>',
+      options: [{ allow: 'non-jsx' }],
+    },
+    {
+      code: '<App>{<Bar />}</App>',
+      options: [{ allow: 'non-jsx' }],
+    },
+    {
       code: '<App>{foo && <Bar />}</App>',
       options: [{ allow: 'single-child' }],
     },
@@ -183,6 +199,38 @@ ruleTester.run('jsx-one-expression-per-line', rule, {
         </>
       `,
       features: ['fragment', 'no-ts-old'], // TODO: FIXME: remove no-ts-old and fix
+    },
+    {
+      code: '<App>Hello {name}</App>',
+      options: [{ allow: 'non-jsx' }],
+    },
+    {
+      code: `
+        <App>
+          Hello {name} there!
+        </App>`,
+      options: [{ allow: 'non-jsx' }],
+    },
+    {
+      code: `
+        <App>
+          Hello {<Bar />} there!
+        </App>`,
+      options: [{ allow: 'non-jsx' }],
+    },
+    {
+      code: `
+        <App>
+          Hello {(<Bar />)} there!
+        </App>`,
+      options: [{ allow: 'non-jsx' }],
+    },
+    {
+      code: `
+        <App>
+          Hello {(() => <Bar />)()} there!
+        </App>`,
+      options: [{ allow: 'non-jsx' }],
     },
   ]),
 
@@ -491,6 +539,28 @@ foo
           data: { descriptor: 'Baz' },
         },
       ],
+      parserOptions,
+    },
+    {
+      code: `
+        <Text style={styles.foo}>
+          <Bar /> <Baz />
+        </Text>
+      `,
+      output: `
+        <Text style={styles.foo}>
+          <Bar />${' '/* intentional trailing space */}
+{' '}
+<Baz />
+        </Text>
+      `,
+      errors: [
+        {
+          messageId: 'moveToNewLine',
+          data: { descriptor: 'Baz' },
+        },
+      ],
+      options: [{ allow: 'non-jsx' }],
       parserOptions,
     },
     {
@@ -847,26 +917,6 @@ foo
         <App>
           <Foo></Foo
         >
-</App>
-      `,
-      errors: [
-        {
-          messageId: 'moveToNewLine',
-          data: { descriptor: 'Foo' },
-        },
-      ],
-      parserOptions,
-    },
-    {
-      code: `
-        <App>
-          <Foo></
-        Foo></App>
-      `,
-      output: `
-        <App>
-          <Foo></
-        Foo>
 </App>
       `,
       errors: [
@@ -1259,6 +1309,23 @@ foo
     },
     {
       code: `
+        <App><Foo /></App>
+      `,
+      output: `
+        <App>
+<Foo />
+</App>
+      `,
+      options: [{ allow: 'non-jsx' }],
+      errors: [
+        {
+          messageId: 'moveToNewLine',
+          data: { descriptor: 'Foo' },
+        },
+      ],
+    },
+    {
+      code: `
         <App
           foo="1"
           bar="2"
@@ -1385,6 +1452,186 @@ a
         {
           messageId: 'moveToNewLine',
           data: { descriptor: '{a}' },
+        },
+      ],
+      parserOptions,
+    },
+    {
+    // TODO: handle in a single pass
+      code: `
+        const IndexPage = () => (
+          <h1>{"Hi people"}<button/></h1>
+        );
+      `,
+      output: `
+        const IndexPage = () => (
+          <h1>
+{"Hi people"}<button/></h1>
+        );
+      `,
+      errors: [
+        {
+          messageId: 'moveToNewLine',
+          data: { descriptor: '{"Hi people"}' },
+        },
+        {
+          messageId: 'moveToNewLine',
+          data: { descriptor: 'button' },
+        },
+      ],
+      parserOptions,
+    },
+    {
+      code: `
+        const IndexPage = () => (
+          <h1>
+{"Hi people"}<button/></h1>
+        );
+      `,
+      output: `
+        const IndexPage = () => (
+          <h1>
+{"Hi people"}
+<button/>
+</h1>
+        );
+      `,
+      errors: [
+        {
+          messageId: 'moveToNewLine',
+          data: { descriptor: 'button' },
+        },
+      ],
+      parserOptions,
+    },
+    // TODO: handle in a single pass (see above)
+    {
+      code: `
+        <Layout>
+        <p>Welcome to your new Gatsby site.</p>
+        <p>Now go build something great.</p>
+        <h1>Hi people<button/></h1>
+        </Layout>
+      `,
+      output: `
+        <Layout>
+        <p>
+Welcome to your new Gatsby site.
+</p>
+        <p>
+Now go build something great.
+</p>
+        <h1>
+Hi people<button/></h1>
+        </Layout>
+      `,
+      errors: [
+        {
+          messageId: 'moveToNewLine',
+          data: { descriptor: 'Welcome to your new Gatsby site.' },
+        },
+        {
+          messageId: 'moveToNewLine',
+          data: { descriptor: 'Now go build something great.' },
+        },
+        {
+          messageId: 'moveToNewLine',
+          data: { descriptor: 'Hi people' },
+        },
+        {
+          messageId: 'moveToNewLine',
+          data: { descriptor: 'button' },
+        },
+      ],
+      parserOptions,
+    },
+    {
+      code: `
+        <Layout>
+        <p>
+Welcome to your new Gatsby site.
+</p>
+        <p>
+Now go build something great.
+</p>
+        <h1>
+Hi people<button/></h1>
+        </Layout>
+      `,
+      output: `
+        <Layout>
+        <p>
+Welcome to your new Gatsby site.
+</p>
+        <p>
+Now go build something great.
+</p>
+        <h1>
+Hi people
+<button/>
+</h1>
+        </Layout>
+      `,
+      errors: [
+        {
+          messageId: 'moveToNewLine',
+          data: { descriptor: 'button' },
+        },
+      ],
+      parserOptions,
+    },
+    // TODO: handle in a single pass
+    {
+      code: `
+        <Layout>
+          <div style={{ maxWidth: \`300px\`, marginBottom: \`1.45rem\` }}>
+            <Image />
+          </div><Link to="/page-2/">Go to page 2</Link>
+        </Layout>
+      `,
+      output: `
+        <Layout>
+          <div style={{ maxWidth: \`300px\`, marginBottom: \`1.45rem\` }}>
+            <Image />
+          </div>
+<Link to="/page-2/">Go to page 2</Link>
+        </Layout>
+      `,
+      errors: [
+        {
+          messageId: 'moveToNewLine',
+          data: { descriptor: 'Link' },
+        },
+        {
+          messageId: 'moveToNewLine',
+          data: { descriptor: 'Go to page 2' },
+        },
+      ],
+      parserOptions,
+    },
+    {
+      code: `
+        <Layout>
+          <div style={{ maxWidth: \`300px\`, marginBottom: \`1.45rem\` }}>
+            <Image />
+          </div>
+<Link to="/page-2/">Go to page 2</Link>
+        </Layout>
+      `,
+      output: `
+        <Layout>
+          <div style={{ maxWidth: \`300px\`, marginBottom: \`1.45rem\` }}>
+            <Image />
+          </div>
+<Link to="/page-2/">
+Go to page 2
+</Link>
+        </Layout>
+      `,
+      errors: [
+        {
+          messageId: 'moveToNewLine',
+          data: { descriptor: 'Go to page 2' },
         },
       ],
       parserOptions,

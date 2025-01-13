@@ -7,20 +7,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: ljharb/actions/node/install@main
         name: 'nvm install lts/* && npm install'
         with:
           node-version: 'lts/*'
-        env:
-          NPM_CONFIG_LEGACY_PEER_DEPS: true
       - run: npm run pretest
 
   posttest:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: ljharb/actions/node/install@main
         name: 'nvm install lts/* && npm install'
         with:

@@ -1,8 +1,10 @@
-# Prevent usage of dangerous JSX properties (react/no-danger)
+# Disallow usage of dangerous JSX properties (`react/no-danger`)
 
-Dangerous properties in React are those whose behavior is known to be a common source of application vulnerabilities. The properties names clearly indicate they are dangerous and should be avoided unless great care is taken.
+<!-- end auto-generated rule header -->
 
-See https://facebook.github.io/react/tips/dangerously-set-inner-html.html
+Dangerous properties in React are those whose behavior is known to be a common source of application vulnerabilities. The properties' names clearly indicate they are dangerous and should be avoided unless great care is taken.
+
+See <https://react.dev/reference/react-dom/components/common#dangerously-setting-the-inner-html>
 
 ## Rule Details
 
@@ -21,6 +23,20 @@ var React = require('react');
 
 var Hello = <div>Hello World</div>;
 ```
+
+## Rule Options
+
+```js
+...
+"react/no-danger": [<enabled>, {
+  "customComponentNames": Array<string>,
+}]
+...
+```
+
+### customComponentNames
+
+Defaults to `[]`, if you want to enable this rule for all custom components you can pass `customComponentNames` as `['*']`, or else you can pass specific components name to the array.
 
 ## When Not To Use It
 

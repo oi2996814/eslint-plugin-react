@@ -9,7 +9,7 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/jsx-tag-spacing');
 
 const parsers = require('../../helpers/parsers');
@@ -113,6 +113,41 @@ ruleTester.run('jsx-tag-spacing', rule, {
     {
       code: '<App/>',
       options: beforeSelfClosingOptions('never'),
+    },
+    {
+      code: '<App />',
+      options: beforeSelfClosingOptions('proportional-always'),
+    },
+    {
+      code: '<App foo />',
+      options: beforeSelfClosingOptions('proportional-always'),
+    },
+    {
+      code: `
+        <App
+          foo={bar}
+          blat
+        >
+          hello
+        </App>
+      `,
+      options: beforeClosingOptions('proportional-always'),
+    },
+    {
+      code: `
+        <App foo={bar}>
+          hello
+        </App>
+      `,
+      options: beforeClosingOptions('proportional-always'),
+    },
+    {
+      code: `
+        <App
+          foo={bar}
+        />
+      `,
+      options: beforeSelfClosingOptions('proportional-always'),
     },
     {
       code: '<App foo/>',
@@ -301,6 +336,76 @@ ruleTester.run('jsx-tag-spacing', rule, {
       output: '<App foo={bar}/>',
       options: beforeSelfClosingOptions('never'),
       errors: [{ messageId: 'beforeSelfCloseNoSpace' }],
+    },
+    {
+      code: '<App/>',
+      output: '<App />',
+      options: beforeSelfClosingOptions('proportional-always'),
+      errors: [{ messageId: 'beforeSelfCloseNeedSpace' }],
+    },
+    {
+      code: '<App foo/>',
+      output: '<App foo />',
+      options: beforeSelfClosingOptions('proportional-always'),
+      errors: [{ messageId: 'beforeSelfCloseNeedSpace' }],
+    },
+    {
+      code: `
+        <App
+          foo={bar}/>`,
+      output: `
+        <App
+          foo={bar}
+/>`,
+      options: beforeSelfClosingOptions('proportional-always'),
+      errors: [{ messageId: 'beforeSelfCloseNeedNewline' }],
+    },
+    {
+      code: `
+        <App
+          foo={bar} />`,
+      output: `
+        <App
+          foo={bar}${' '}
+/>`,
+      options: beforeSelfClosingOptions('proportional-always'),
+      errors: [{ messageId: 'beforeSelfCloseNeedNewline' }],
+    },
+    {
+      code: `
+        <App
+          foo={bar}
+          blat >
+          hello
+        </App>
+      `,
+      output: `
+        <App
+          foo={bar}
+          blat${' '}
+>
+          hello
+        </App>
+      `,
+      options: beforeClosingOptions('proportional-always'),
+      errors: [{ messageId: 'beforeCloseNeedNewline' }],
+    },
+    {
+      code: `
+        <App
+          foo={bar}>
+          hello
+        </App>
+      `,
+      output: `
+        <App
+          foo={bar}
+>
+          hello
+        </App>
+      `,
+      options: beforeClosingOptions('proportional-always'),
+      errors: [{ messageId: 'beforeCloseNeedNewline' }],
     },
     {
       code: '<App {...props} />',

@@ -4,7 +4,9 @@
 
 'use strict';
 
-const RuleTester = require('eslint').RuleTester;
+const semver = require('semver');
+const eslintPkg = require('eslint/package.json');
+const RuleTester = require('../../helpers/ruleTester');
 const rule = require('../../../lib/rules/destructuring-assignment');
 
 const parsers = require('../../helpers/parsers');
@@ -250,7 +252,7 @@ ruleTester.run('destructuring-assignment', rule, {
       options: ['always', { ignoreClassFields: true }],
       features: ['class fields'],
     },
-    // https://github.com/yannickcr/eslint-plugin-react/issues/2911
+    // https://github.com/jsx-eslint/eslint-plugin-react/issues/2911
     {
       code: `
         function Foo({ context }) {
@@ -338,9 +340,114 @@ ruleTester.run('destructuring-assignment', rule, {
         }
       `,
     },
+    {
+      code: `
+        function Foo(props) {
+          const {a} = props;
+          return <Goo {...props}>{a}</Goo>;
+        }
+      `,
+      options: ['always', { destructureInSignature: 'always' }],
+    },
+    {
+      code: `
+        function Foo(props) {
+          const {a} = props;
+          return <Goo f={() => props}>{a}</Goo>;
+        }
+      `,
+      options: ['always', { destructureInSignature: 'always' }],
+    },
+    {
+      code: `
+        import { useContext } from 'react';
+
+        const MyComponent = (props) => {
+          const {foo} = useContext(aContext);
+          return <div>{foo}</div>
+        };
+      `,
+      options: ['always'],
+      settings: { react: { version: '16.9.0' } },
+    },
+    {
+      code: `
+        import { useContext } from 'react';
+
+        const MyComponent = (props) => {
+          const foo = useContext(aContext);
+          return <div>{foo.test}</div>
+        };
+      `,
+      options: ['never'],
+      settings: { react: { version: '16.9.0' } },
+    },
+    {
+      code: `
+        import { useContext } from 'react';
+
+        const MyComponent = (props) => {
+          const foo = useContext(aContext);
+          return <div>{foo.test}</div>
+        };
+      `,
+      options: ['always'],
+      settings: { react: { version: '16.9.0' } },
+    },
+    {
+      code: `
+        const MyComponent = (props) => {
+          const foo = useContext(aContext);
+          return <div>{foo.test}</div>
+        };
+      `,
+      options: ['always'],
+      settings: { react: { version: '16.8.999' } },
+    },
+    {
+      code: `
+        const MyComponent = (props) => {
+          const {foo} = useContext(aContext);
+          return <div>{foo}</div>
+        };
+      `,
+      options: ['never'],
+      settings: { react: { version: '16.8.999' } },
+    },
+    {
+      code: `
+        const MyComponent = (props) => {
+          const {foo} = useContext(aContext);
+          return <div>{foo}</div>
+        };
+      `,
+      options: ['always'],
+      settings: { react: { version: '16.8.999' } },
+    },
+    {
+      code: `
+        const MyComponent = (props) => {
+          const foo = useContext(aContext);
+          return <div>{foo.test}</div>
+        };
+      `,
+      options: ['never'],
+      settings: { react: { version: '16.8.999' } },
+    },
+    {
+      code: `
+        import { useContext } from 'react';
+
+        const MyComponent = (props) => {
+          const foo = useContext(aContext);
+          return <div>{foo?.test}</div>
+        };
+      `,
+      features: ['optional chaining'],
+    },
   ]),
 
-  invalid: parsers.all([
+  invalid: parsers.all([].concat(
     {
       code: `
         const MyComponent = (props) => {
@@ -439,7 +546,7 @@ ruleTester.run('destructuring-assignment', rule, {
     },
     {
       code: `
-        var Hello = React.createClass({
+        var Hello = createReactClass({
           render: function() {
             return <Text>{this.props.foo}</Text>;
           }
@@ -632,7 +739,7 @@ ruleTester.run('destructuring-assignment', rule, {
 
         const TestComp = (props) => {
           props.onClick3102();
-        
+
           return (
             <div
               onClick={(evt) => {
@@ -720,5 +827,114 @@ ruleTester.run('destructuring-assignment', rule, {
         },
       ],
     },
-  ]),
+    // Ignore for ESLint < 4 because ESLint < 4 does not support array fixer.
+    semver.satisfies(eslintPkg.version, '>= 4') ? [
+      {
+        code: `
+          function Foo(props) {
+            const {a} = props;
+            return <p>{a}</p>;
+          }
+        `,
+        options: ['always', { destructureInSignature: 'always' }],
+        errors: [
+          {
+            messageId: 'destructureInSignature',
+            line: 3,
+          },
+        ],
+        output: `
+          function Foo({a}) {
+${'            '}
+            return <p>{a}</p>;
+          }
+        `,
+      },
+      {
+        code: `
+          function Foo(props: FooProps) {
+            const {a} = props;
+            return <p>{a}</p>;
+          }
+        `,
+        options: ['always', { destructureInSignature: 'always' }],
+        errors: [
+          {
+            messageId: 'destructureInSignature',
+            line: 3,
+          },
+        ],
+        output: `
+          function Foo({a}: FooProps) {
+${'            '}
+            return <p>{a}</p>;
+          }
+        `,
+        features: ['ts', 'no-babel'],
+      },
+    ] : [],
+    {
+      code: `
+        type Props = { text: string };
+        export const MyComponent: React.FC<Props> = (props) => {
+          type MyType = typeof props.text;
+          return <div>{props.text as MyType}</div>;
+        };
+      `,
+      options: ['always', { destructureInSignature: 'always' }],
+      features: ['types', 'no-babel'],
+      errors: [
+        {
+          messageId: 'useDestructAssignment',
+          type: 'TSQualifiedName',
+          data: { type: 'props' },
+        },
+        {
+          messageId: 'useDestructAssignment',
+          type: 'MemberExpression',
+          data: { type: 'props' },
+        },
+      ],
+    },
+    {
+      code: `
+        type Props = { text: string };
+        export const MyOtherComponent: React.FC<Props> = (props) => {
+          const { text } = props;
+          type MyType = typeof props.text;
+          return <div>{text as MyType}</div>;
+        };
+      `,
+      options: ['always', { destructureInSignature: 'always' }],
+      features: ['types', 'no-babel'],
+      errors: [
+        {
+          messageId: 'useDestructAssignment',
+          type: 'TSQualifiedName',
+          data: { type: 'props' },
+        },
+      ],
+    },
+    {
+      code: `
+        function C(props: Props) {
+          void props.a
+          typeof props.b
+          return <div />
+        }
+      `,
+      options: ['always'],
+      features: ['types'],
+      errors: [
+        {
+          messageId: 'useDestructAssignment',
+          data: { type: 'props' },
+        },
+        {
+          messageId: 'useDestructAssignment',
+          data: { type: 'props' },
+        },
+      ],
+    }
+  )),
 });

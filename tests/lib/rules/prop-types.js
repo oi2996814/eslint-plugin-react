@@ -12,7 +12,7 @@
 const semver = require('semver');
 const eslintPkg = require('eslint/package.json').version;
 const babelEslintVersion = require('babel-eslint/package.json').version;
-const RuleTester = require('eslint').RuleTester;
+const RuleTester = require('../../helpers/ruleTester');
 
 const rule = require('../../../lib/rules/prop-types');
 
@@ -1571,25 +1571,19 @@ ruleTester.run('prop-types', rule, {
       options: [{ skipUndeclared: false }],
     },
     {
-      // Async functions can't be components.
+      // Async generator functions can't be components.
       code: `
-        var Hello = async function(props) {
+        var Hello = async function* (props) {
+          yield null;
           return <div>Hello {props.name}</div>;
         }
       `,
     },
     {
-      // Async functions can't be components.
+      // Async generator functions can't be components.
       code: `
-        async function Hello(props) {
-          return <div>Hello {props.name}</div>;
-        }
-      `,
-    },
-    {
-      // Async functions can't be components.
-      code: `
-        var Hello = async (props) => {
+        async function* Hello(props) {
+          yield null;
           return <div>Hello {props.name}</div>;
         }
       `,
@@ -2112,7 +2106,7 @@ ruleTester.run('prop-types', rule, {
     },
     {
       code: `
-        const withOverlayState = <P: {foo: string}>(WrappedComponent: ComponentType<P>): CpmponentType<P> => (
+        const withOverlayState = <P: {foo: string}>(WrappedComponent: ComponentType<P>): ComponentType<P> => (
           class extends React.Component<P> {
             constructor(props) {
               super(props);
@@ -3344,7 +3338,7 @@ ruleTester.run('prop-types', rule, {
       features: ['ts', 'no-babel'],
     },
     {
-      // issue: https://github.com/yannickcr/eslint-plugin-react/issues/2786
+      // issue: https://github.com/jsx-eslint/eslint-plugin-react/issues/2786
       code: `
         import React from 'react';
 
@@ -3354,6 +3348,20 @@ ruleTester.run('prop-types', rule, {
 
         const SomeComponent: React.FC<Props> = ({ item }: Props) => {
           return item ? <></> : <></>;
+        };
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React from "react";
+
+        const returnTypeProp = (someProp: any) => ({ someProp });
+
+        const SomeComponent: React.FunctionComponent<
+          ReturnType<typeof returnTypeProp>
+        > = ({ someProp }) => {
+          return <div>{someProp}</div>;
         };
       `,
       features: ['ts', 'no-babel'],
@@ -3432,6 +3440,51 @@ ruleTester.run('prop-types', rule, {
           age: number
           }
           const Hello: React.VoidFunctionComponent<Props> = function Hello(props) {
+          const { age } = props;
+
+          return <div>Hello {age}</div>;
+          }
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+          import React, { VFC } from 'react'
+
+          interface Props {
+          age: number
+          }
+          const Hello: VFC<Props> = function Hello(props) {
+          const { age } = props;
+
+          return <div>Hello {age}</div>;
+          }
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+          import React from 'react'
+
+          interface Props {
+          age: number
+          }
+          const Hello: React.VFC<Props> = function Hello(props) {
+          const { age } = props;
+
+          return <div>Hello {age}</div>;
+          }
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+          import React from 'react'
+
+          export interface Props {
+          age: number
+          }
+          const Hello: React.VFC<Props> = function Hello(props) {
           const { age } = props;
 
           return <div>Hello {age}</div>;
@@ -3608,7 +3661,7 @@ ruleTester.run('prop-types', rule, {
     {
       code: `
         import React, { forwardRef } from "react";
-  
+
         export type Props = { children: React.ReactNode; type: "submit" | "button" };
 
         export const FancyButton = forwardRef<HTMLButtonElement, Props>((props, ref) => (
@@ -3670,6 +3723,956 @@ ruleTester.run('prop-types', rule, {
         ));
       `,
       features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        type ButtonProps = ({
+            children: React.Node,
+        } | {
+            icon: React.Element,
+        }) & {
+            label: string,
+            disabled?: boolean
+        } & {};
+
+        const Button: React.FC<ButtonProps> = ({ children, icon, label, disabled }: ButtonProps) => {
+          return <div />;
+        }
+      `,
+      features: ['types'],
+    },
+    {
+      code: `
+        import React, {PropTypes} from 'react'
+
+        function Foo({bar}) {
+          const {baz} = Foo
+          return <div>{baz} {bar}</div>
+        }
+
+        Foo.propTypes = {
+          bar: PropTypes.string.isRequired,
+        }
+
+        Foo.baz = 'hi'
+      `,
+    },
+
+    {
+      code: `
+        type Props = {
+          'data-hover': string
+        }
+
+        function MyComponent({
+          'data-hover': dataHover
+        }: Props) {
+          return <span data-hover={dataHover} />
+        }
+      `,
+      features: ['types'],
+    },
+    {
+      code: `
+        import React, { PropTypes } from 'react';
+
+        function MyComponent({ name }) {
+          const someParams = {
+            userName: name,
+            greeting: 'Hi there',
+          };
+
+          function getMessage({ userName, greeting }) {
+            return <span>\`\${greeting} \${userName}\`</span>;
+          }
+
+          return (
+            <div>
+              { getMessage(someParams) }
+            </div>
+          );
+        }
+
+        MyComponent.propTypes = {
+          name: PropTypes.string.isRequired,
+        };
+
+        export default MyComponent;
+      `,
+    },
+    {
+      code: `
+        type Field = {
+            value: string,
+            error: string,
+        }
+
+        type Form = {
+            fields: {
+                [string]: Field,
+            },
+            formError: string,
+        }
+
+        type Props = {
+            bankDetails: Form,
+            onBankDetailsUpdate: any => void,
+        }
+
+        const Provider = (props:Props) =>
+                    <Input
+                        label={'Account Name'}
+                        value={props.bankDetails.fields.accountName.value}
+                        error={props.bankDetails.fields.accountName.error}
+                        onChange={newVal => props.onBankDetailsUpdate({ accountName: newVal })}
+                    />
+      `,
+      features: ['flow'],
+    },
+    {
+      code: `
+        class App extends React.Component {
+          render() {
+            return (
+                <h1>Open the console</h1>
+            )
+          }
+        }
+
+        // does not work
+        App.propTypes = PropTypes.exact({
+          foo: PropTypes.object,
+        });
+      `,
+      settings: {
+        propWrapperFunctions: [
+          { object: 'PropTypes', property: 'exact', exact: true },
+        ],
+      },
+    },
+    {
+      code: `
+        class Test extends React.Component {
+          componentDidUpdate() {
+              const {bar} = this.state;
+              console.log(bar);
+          }
+
+          render() {
+              return null;
+          }
+        }
+      `,
+    },
+    {
+      code: `
+        const DisplayName = (props) => {
+            const getNameDiv = () => {
+                return <div>{props.name}</div>;
+            };
+
+            return getNameDiv();
+        };
+
+        DisplayName.propTypes = {
+            name: PropTypes.string.isRequired,
+        };
+      `,
+    },
+    {
+      code: `
+        const SomeComponent = (props) => {
+          function renderComponent() {
+            return <div>{props.name}</div>
+          }
+
+          return renderComponent();
+        }
+
+        SomeComponent.propTypes = {
+          name: PropTypes.string
+        }
+      `,
+    },
+    {
+      code: `
+        import React from 'react';
+        import { MyType } from './types';
+
+        function Component(props: Props): JSX.Element | null {
+          const { array } = props;
+
+          function renderFound(): JSX.Element | null {
+            const found = array.find(x => x.id === id); // issue here
+
+            if (!found) {
+              return null;
+            }
+
+            return (
+              <div>{found.id}</div>
+            );
+          }
+
+          return renderFound();
+        }
+
+        interface Props {
+          array: MyType[];
+        }
+
+        export default Component;
+      `,
+      features: ['types'],
+    },
+    {
+      code: `
+        export default React.memo(function AppIcon({
+          icon,
+          className,
+          title,
+          spinning,
+        }: {
+          icon: string | IconDefinition;
+          className?: string;
+          title?: string;
+          spinning?: boolean;
+        }) {
+          if (typeof icon === 'string') {
+            return (
+              <span
+                className={clsx(
+                  icon,
+                  'app-icon',
+                  'no-pointer-events',
+                  className,
+                  spinning ? 'fa-spin' : false
+                )}
+                title={title}
+              />
+            );
+          } else {
+            return (
+              <FontAwesomeIcon
+                className={className ? 'app-icon ' + className : 'app-icon'}
+                icon={icon}
+                title={title}
+                spin={spinning}
+              />
+            );
+          }
+        });
+      `,
+      features: ['types'],
+    },
+    {
+      code: `
+        import PropTypes from 'prop-types';
+        import React from 'react';
+
+        import { Link } from '..';
+
+        const LinkWrapper = ({ primaryLinks }) => (
+          <>
+            {primaryLinks.map((x, index) => (
+              <Link key={index} href={x.link}>
+                {x.text}
+              </Link>
+            ))}
+          </>
+        );
+
+        LinkWrapper.propTypes = {
+          primaryLinks: PropTypes.arrayOf(
+            PropTypes.shape({
+              text: PropTypes.string,
+            })
+          ),
+        };
+
+        export default LinkWrapper;
+      `,
+      features: ['fragment'],
+    },
+    {
+      code: `
+        const projectType = PropTypes.shape({
+          id: PropTypes.string.isRequired,
+          name: PropTypes.string.isRequired,
+        });
+
+        const nodesType = PropTypes.arrayOf(
+          PropTypes.shape({ project: projectType, children: nodesType }),
+        );
+
+        class ProjectNode extends React.Component {
+          render() {
+            return <div />;
+          }
+        }
+
+        ProjectNode.propTypes = {
+          project: projectType.isRequired,
+          nodes: nodesType,
+          depth: PropTypes.number.isRequired,
+          setActiveProject: PropTypes.func.isRequired,
+          activeProject: projectType,
+        };
+      `,
+    },
+    {
+      code: `
+        import React from 'react';
+
+        interface SomeType<ContextType = any> {
+          renderValue: (context: ContextType) => React.ReactNode;
+        }
+
+        interface DataObject {
+          id: string,
+          title: string,
+          value: string,
+        }
+
+        const someType: SomeType<DataObject> = {
+          renderValue: ({title}) => <div>{title}</div>,
+        };
+      `,
+      features: ['types'],
+    },
+    {
+      code: `
+        <MyComponent
+          options={{
+            tabBarIcon: ({ color, size }) => (
+              <Icon name="dumbbell" size={size} color={color} />
+            )
+          }}
+        />
+      `,
+    },
+    {
+      code: `
+        import React, { forwardRef } from 'react';
+        import { ControlProps, NamedProps } from './ext';
+
+        type ButtonProps = ControlProps & NamedProps & {
+          onClick?: (() => void) | undefined;
+          onMouseDown?: (() => void) | undefined;
+          onMouseUp?: (() => void) | undefined;
+          disabled?: boolean | undefined;
+          width?: number;
+          type?: 'submit' | 'reset' | 'button' | undefined;
+        };
+
+        const BaseButton = forwardRef<HTMLButtonElement, ButtonProps>((
+          {
+            name,
+            className,
+            onClick,
+            onMouseDown,
+            onMouseUp,
+            children,
+            disabled,
+            width,
+            type,
+          },
+          ref,
+        ): JSX.Element => {
+          return <span>{width}</span>;
+        });
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React, { forwardRef } from 'react';
+        import { ControlProps, NamedProps } from './ext';
+
+        interface ButtonProps extends NamedProps {
+          onClick?: (() => void) | undefined;
+          onMouseDown?: (() => void) | undefined;
+          onMouseUp?: (() => void) | undefined;
+          disabled?: boolean | undefined;
+          width?: number;
+          type?: 'submit' | 'reset' | 'button' | undefined;
+        };
+
+        const BaseButton = forwardRef<HTMLButtonElement, ButtonProps>((
+          {
+            name,
+            className,
+            onClick,
+            onMouseDown,
+            onMouseUp,
+            children,
+            disabled,
+            width,
+            type,
+          },
+          ref,
+        ): JSX.Element => {
+          return <span>{width}</span>;
+        });
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import {ComponentPropsWithoutRef, forwardRef} from "react";
+
+        export const FancyButton = forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<"button">>(
+          ({ className, children, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+              {children}
+            </button>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import {ComponentProps, forwardRef} from "react";
+
+        export const FancyButton = forwardRef<HTMLButtonElement, ComponentProps<"button">>(
+          ({ className, children, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+              {children}
+            </button>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import {ComponentPropsWithoutRef, ElementRef, forwardRef} from "react";
+
+        const BaseButton = forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = forwardRef<ElementRef<typeof BaseButton>, ComponentPropsWithoutRef<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import {ComponentProps, ElementRef, forwardRef} from "react";
+
+        const BaseButton = forwardRef<HTMLButtonElement, ComponentProps<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = forwardRef<ElementRef<typeof BaseButton>, ComponentProps<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import {ComponentProps, ComponentPropsWithoutRef, ElementRef, forwardRef} from "react";
+
+        const BaseButton = forwardRef<HTMLButtonElement, ComponentProps<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = forwardRef<ElementRef<typeof BaseButton>, ComponentPropsWithoutRef<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import {ComponentProps, ComponentPropsWithoutRef, ElementRef, forwardRef} from "react";
+
+        const BaseButton = forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = forwardRef<ElementRef<typeof BaseButton>, ComponentProps<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React from "react";
+
+        export const FancyButton = React.forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
+          ({ className, children, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+              {children}
+            </button>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React from "react";
+
+        export const FancyButton = React.forwardRef<HTMLButtonElement, React.ComponentPropsWithoutRef<"button">>(
+          ({ className, children, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+              {children}
+            </button>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React from "react";
+
+        const BaseButton = React.forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = React.forwardRef<React.ElementRef<typeof BaseButton>, React.ComponentProps<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React from "react";
+
+        const BaseButton = React.forwardRef<HTMLButtonElement, React.ComponentPropsWithoutRef<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = React.forwardRef<React.ElementRef<typeof BaseButton>, React.ComponentPropsWithoutRef<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React from "react";
+
+        const BaseButton = React.forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = React.forwardRef<React.ElementRef<typeof BaseButton>, React.ComponentPropsWithoutRef<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React from "react";
+
+        const BaseButton = React.forwardRef<HTMLButtonElement, React.ComponentPropsWithoutRef<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = React.forwardRef<React.ElementRef<typeof BaseButton>, React.ComponentProps<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import * as React from "react";
+
+        export const FancyButton = React.forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
+          ({ className, children, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+              {children}
+            </button>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import * as React from "react";
+
+        export const FancyButton = React.forwardRef<HTMLButtonElement, React.ComponentPropsWithoutRef<"button">>(
+          ({ className, children, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+              {children}
+            </button>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import * as React from "react";
+
+        const BaseButton = React.forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = React.forwardRef<React.ElementRef<typeof BaseButton>, React.ComponentProps<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import * as React from "react";
+
+        const BaseButton = React.forwardRef<HTMLButtonElement, React.ComponentPropsWithoutRef<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = React.forwardRef<React.ElementRef<typeof BaseButton>, React.ComponentPropsWithoutRef<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import * as React from "react";
+
+        const BaseButton = React.forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = React.forwardRef<React.ElementRef<typeof BaseButton>, React.ComponentPropsWithoutRef<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import * as React from "react";
+
+        const BaseButton = React.forwardRef<HTMLButtonElement, React.ComponentPropsWithoutRef<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = React.forwardRef<React.ElementRef<typeof BaseButton>, React.ComponentProps<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React, {ComponentPropsWithoutRef} from "react";
+
+        export const FancyButton = React.forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<"button">>(
+          ({ className, children, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+              {children}
+            </button>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React, {ComponentProps} from "react";
+
+        export const FancyButton = React.forwardRef<HTMLButtonElement, ComponentProps<"button">>(
+          ({ className, children, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+              {children}
+            </button>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React, {ComponentPropsWithoutRef, ElementRef} from "react";
+
+        const BaseButton = React.forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = React.forwardRef<ElementRef<typeof BaseButton>, ComponentPropsWithoutRef<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React, {ComponentProps, ElementRef} from "react";
+
+        const BaseButton = React.forwardRef<HTMLButtonElement, ComponentProps<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = React.forwardRef<ElementRef<typeof BaseButton>, ComponentProps<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React, {ComponentProps, ComponentPropsWithoutRef, ElementRef} from "react";
+
+        const BaseButton = React.forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = React.forwardRef<ElementRef<typeof BaseButton>, ComponentProps<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React, {ComponentProps, ComponentPropsWithoutRef, ElementRef} from "react";
+
+        const BaseButton = React.forwardRef<HTMLButtonElement, ComponentProps<"button">>(
+          ({ children, className, ...props }, ref) => (
+            <button ref={ref} className={className} {...props}>
+                {children}
+            </button>
+          ),
+        );
+
+        export const FancyButton = React.forwardRef<ElementRef<typeof BaseButton>, ComponentPropsWithoutRef<typeof BaseButton>>(
+          ({ children, className, ...props }, ref) => (
+            <BaseButton ref={ref} className={className} {...props}>
+              {children}
+            </BaseButton>
+          ),
+        );
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React, { forwardRef } from 'react';
+        import { IExt1 } from './ext';
+
+        interface IProps extends IExt1 {
+          onClick?: (() => void) | undefined;
+          onMouseDown?: (() => void) | undefined;
+          onMouseUp?: (() => void) | undefined;
+          disabled?: boolean | undefined;
+          width?: number;
+          type?: 'submit' | 'reset' | 'button' | undefined;
+        };
+
+        const Button: React.FC<IProps> = ({
+          name,
+          className,
+          onClick,
+          onMouseDown,
+          onMouseUp,
+          children,
+          disabled,
+          width,
+          type,
+        }): JSX.Element => {
+          return <span>{width}</span>;
+        };
+      `,
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React, { memo } from 'react';
+        interface Props1 {
+            age: number;
+        }
+        const HelloTemp = memo(({ age }: Props1) => {
+            return <div>Hello {age}</div>;
+        });
+        export const Hello = HelloTemp
+      `,
+      features: ['types'],
+    },
+    {
+      code: `
+        import React, { forwardRef, memo } from 'react';
+        interface Props1 {
+            age: number;
+        }
+        const HelloTemp = forwardRef(({ age }: Props1) => {
+            return <div>Hello {age}</div>;
+        });
+        export const Hello = memo(HelloTemp);
+      `,
+      features: ['types'],
+    },
+    {
+      code: `
+        import React, { forwardRef, memo } from 'react';
+        interface Props1 {
+            age: number;
+        }
+        export const Hello = memo(
+            forwardRef(({ age }: Props1) => {
+                return <div>Hello {age}</div>;
+            }),
+        );
+      `,
+      features: ['types'],
+    },
+    {
+      code: `
+        import React from "react"
+
+        export function Heading({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+          return <div className={cn("font-semibold text-lg", className)} {...props} />
+        }
+      `,
+      features: ['types'],
+    },
+    {
+      code: `
+        import React from 'react';
+        type TDelIconProps = React.HTMLProps<HTMLDivElement>;
+
+        const DelIcon: React.FC<TDelIconProps> = ({className, ...rest}) => (
+            <div className={classNames('del flex-center', className)} {...rest}>
+                <i className="iconfont icon-del f12" />
+            </div>
+        );
+      `,
+      features: ['types'],
     }
   )),
 
@@ -4476,6 +5479,73 @@ ruleTester.run('prop-types', rule, {
       ],
     },
     {
+      features: ['no-default', 'no-ts', 'no-babel'], // TODO: remove this entire line, and fix the failures
+      code: `
+        class Test extends Foo.Component {
+          render() {
+            return (
+              <div>{this.props.firstname} {this.props.lastname}</div>
+            );
+          }
+        };
+        const propTypes = forbidExtraProps({
+          firstname: PropTypes.string
+        });
+        Test.propTypes = propTypes;
+      `,
+      settings: {
+        propWrapperFunctions: ['forbidExtraProps'],
+      },
+      errors: [
+        {
+          messageId: 'missingPropType',
+          data: { name: 'lastname' },
+          line: 5,
+        },
+      ],
+    },
+    {
+      code: `
+        class Test extends Foo.Component {
+          render() {
+            return (
+              <div>{this.props.firstname} {this.props.lastname}</div>
+            );
+          }
+        }
+        Test.propTypes = {
+          firstname: PropTypes.string
+        };
+      `,
+      settings,
+      errors: [
+        {
+          messageId: 'missingPropType',
+          data: { name: 'lastname' },
+          line: 5,
+        },
+      ],
+    },
+    {
+      code: `
+        type MyComponentProps = {
+          a: number,
+        };
+        function MyComponent({ a, b }: MyComponentProps) {
+          return <div />;
+        }
+      `,
+      features: ['types'],
+      errors: [
+        {
+          messageId: 'missingPropType',
+          data: { name: 'b' },
+          line: 5,
+          column: 35,
+        },
+      ],
+    },
+    {
       code: `
         class Hello extends React.Component {
           render() {
@@ -4698,27 +5768,6 @@ ruleTester.run('prop-types', rule, {
         }
         Test.propTypes = propTypes;
       `,
-      errors: [
-        {
-          messageId: 'missingPropType',
-          data: { name: 'lastname' },
-        },
-      ],
-    },
-    {
-      code: `
-        class Test extends Foo.Component {
-          render() {
-            return (
-              <div>{this.props.firstname} {this.props.lastname}</div>
-            );
-          }
-        }
-        Test.propTypes = {
-          firstname: PropTypes.string
-        };
-      `,
-      settings,
       errors: [
         {
           messageId: 'missingPropType',
@@ -6017,7 +7066,7 @@ ruleTester.run('prop-types', rule, {
       },
       {
         code: `
-          const withOverlayState = <P: {foo: string}>(WrappedComponent: ComponentType<P>): CpmponentType<P> => (
+          const withOverlayState = <P: {foo: string}>(WrappedComponent: ComponentType<P>): ComponentType<P> => (
             class extends React.Component<P> {
               constructor(props) {
                 super(props);
@@ -7264,6 +8313,26 @@ ruleTester.run('prop-types', rule, {
     },
     {
       code: `
+        import React from "react";
+
+        const returnTypeProp = (someProp: any) => ({ someProp });
+
+        const SomeComponent: React.FunctionComponent<
+          ReturnType<typeof returnTypeProp>
+        > = ({ someIncorrectProp }) => {
+          return <div>{someProp}</div>;
+        };
+      `,
+      errors: [
+        {
+          messageId: 'missingPropType',
+          data: { name: 'someIncorrectProp' },
+        },
+      ],
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
         import React from 'react';
         interface PersonProps {
             username: string;
@@ -7354,12 +8423,54 @@ ruleTester.run('prop-types', rule, {
     },
     {
       code: `
+        import React, { VFC } from 'react'
+
+        interface Props {
+        age: number
+        }
+        const Hello: VFC<Props> = function Hello(props) {
+        const { test } = props;
+
+        return <div>Hello {name}</div>;
+        }
+      `,
+      errors: [
+        {
+          messageId: 'missingPropType',
+          data: { name: 'test' },
+        },
+      ],
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
         import React from 'react'
 
         interface Props {
         age: number
         }
         const Hello: React.VoidFunctionComponent<Props> = function Hello(props) {
+        const { test } = props;
+
+        return <div>Hello {name}</div>;
+        }
+      `,
+      errors: [
+        {
+          messageId: 'missingPropType',
+          data: { name: 'test' },
+        },
+      ],
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React from 'react'
+
+        interface Props {
+        age: number
+        }
+        const Hello: React.VFC<Props> = function Hello(props) {
         const { test } = props;
 
         return <div>Hello {name}</div>;
@@ -7446,7 +8557,7 @@ ruleTester.run('prop-types', rule, {
     {
       code: `
         import React, { forwardRef } from "react";
-  
+
         export type Props = { children: React.ReactNode; type: "submit" | "button" };
 
         export const FancyButton = forwardRef<HTMLButtonElement, Props>((props, ref) => (
@@ -7466,7 +8577,7 @@ ruleTester.run('prop-types', rule, {
     {
       code: `
         import React, { forwardRef } from "react";
-  
+
         export interface IProps { children: React.ReactNode; type: "submit" | "button" };
 
         export const FancyButton = forwardRef<HTMLButtonElement, IProps>((props, ref) => (
@@ -7576,6 +8687,101 @@ ruleTester.run('prop-types', rule, {
         },
       ],
       features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        import React from 'react';
+
+        export interface PersonProps {
+            username: string;
+        }
+        const Person: React.VFC<PersonProps> = (props): React.ReactElement => (
+            <div>{props.nonExistent}</div>
+        );
+      `,
+      errors: [
+        {
+          messageId: 'missingPropType',
+          data: { name: 'nonExistent' },
+        },
+      ],
+      features: ['ts', 'no-babel'],
+    },
+    {
+      code: `
+        const Foo = ({ foo }) => {
+          return <SomeJSX />;
+        }
+      `,
+      errors: [
+        {
+          messageId: 'missingPropType',
+          data: { name: 'foo' },
+        },
+      ],
+    },
+    {
+      code: `
+        const Foo = ({ foo }) => {
+          const returnValue = <SomeJSX />;
+          return returnValue;
+        }
+      `,
+      errors: [
+        {
+          messageId: 'missingPropType',
+          data: { name: 'foo' },
+        },
+      ],
+    },
+    {
+      code: `
+        function _EventsList({ prop_ }) {
+            return (
+                <div>
+                    {prop_.events.map((event) => (
+                        <Event key={event.id} eventId={event.id} />
+                    ))}
+                </div>
+            );
+        }
+
+        function $EventsList({ prop$ }) {
+          return (
+              <div>
+                  {prop$.events.map((event) => (
+                      <Event key={event.id} eventId={event.id} />
+                  ))}
+              </div>
+          );
+      }
+      `,
+      errors: [
+        {
+          messageId: 'missingPropType',
+          data: { name: 'prop_' },
+        },
+        {
+          messageId: 'missingPropType',
+          data: { name: 'prop_.events' },
+        },
+        {
+          messageId: 'missingPropType',
+          data: { name: 'prop_.events.map' },
+        },
+        {
+          messageId: 'missingPropType',
+          data: { name: 'prop$' },
+        },
+        {
+          messageId: 'missingPropType',
+          data: { name: 'prop$.events' },
+        },
+        {
+          messageId: 'missingPropType',
+          data: { name: 'prop$.events.map' },
+        },
+      ],
     }
   )),
 });

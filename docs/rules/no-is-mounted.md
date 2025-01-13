@@ -1,8 +1,12 @@
-# Prevent usage of isMounted (react/no-is-mounted)
+# Disallow usage of isMounted (`react/no-is-mounted`)
+
+💼 This rule is enabled in the ☑️ `recommended` [config](https://github.com/jsx-eslint/eslint-plugin-react/#shareable-configs).
+
+<!-- end auto-generated rule header -->
 
 [`isMounted` is an anti-pattern][anti-pattern], is not available when using ES6 classes, and it is on its way to being officially deprecated.
 
-[anti-pattern]: https://facebook.github.io/react/blog/2015/12/16/ismounted-antipattern.html
+[anti-pattern]: https://legacy.reactjs.org/blog/2015/12/16/ismounted-antipattern.html
 
 ## Rule Details
 
