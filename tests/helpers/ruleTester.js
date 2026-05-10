@@ -47,6 +47,24 @@ function convertToFlat(item, plugins) {
   return newItem;
 }
 
+const eslintMajor = semver.major(eslintPkg.version);
+
+function stripTypeOnEslint10(test) {
+  if (eslintMajor < 10 || !test || typeof test !== 'object' || !Array.isArray(test.errors)) {
+    return test;
+  }
+  return Object.assign({}, test, {
+    errors: test.errors.map((err) => {
+      if (!err || typeof err !== 'object' || !('type' in err)) {
+        return err;
+      }
+      const next = Object.assign({}, err);
+      delete next.type;
+      return next;
+    }),
+  });
+}
+
 let RuleTester = ESLintRuleTester;
 
 if (semver.major(eslintPkg.version) >= 9) {
@@ -98,7 +116,9 @@ if (semver.major(eslintPkg.version) >= 9) {
     run(ruleName, rule, tests) {
       const newTests = {
         valid: tests.valid.map((test) => convertToFlat(test, this[PLUGINS])),
-        invalid: tests.invalid.map((test) => convertToFlat(test, this[PLUGINS])),
+        invalid: tests.invalid
+          .map(stripTypeOnEslint10)
+          .map((test) => convertToFlat(test, this[PLUGINS])),
       };
 
       super.run(ruleName, rule, newTests);

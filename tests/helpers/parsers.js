@@ -150,7 +150,8 @@ const parsers = {
         || features.has('jsx namespace')
         || features.has('bind operator')
         || features.has('do expressions');
-      const tsOld = !skipTS && !features.has('no-ts-old');
+      // typescript-eslint-parser (deprecated) cannot parse a TS 5 tsconfig, used by the eslint 10 matrix.
+      const tsOld = !skipTS && !features.has('no-ts-old') && !semver.satisfies(version, '>= 10');
       const tsNew = !skipTS && !features.has('no-ts-new');
 
       return [].concat(
