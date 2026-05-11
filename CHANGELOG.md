@@ -26,6 +26,7 @@ This change log adheres to standards from [Keep a CHANGELOG](https://keepachange
 * [`no-unused-prop-types`]: detect used props in nested components ([#3955][] @avaice)
 
 ### Changed
+* [`react-in-jsx-scope`], [`jsx-uses-react`]: automatically disable when React >= 19 is detected ([#XXXX][] @jonkoops)
 * [Docs] [`no-array-index-key`]: add template literal examples ([#3978][] @akahoshi1421)
 
 [#3986]: https://github.com/jsx-eslint/eslint-plugin-react/pull/3986

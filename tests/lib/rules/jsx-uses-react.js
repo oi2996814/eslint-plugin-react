@@ -27,6 +27,7 @@ const parserOptions = {
 const settings = {
   react: {
     pragma: 'Foo',
+    version: '18',
   },
 };
 
@@ -34,7 +35,10 @@ const settings = {
 // Tests
 // -----------------------------------------------------------------------------
 
-const ruleTester = new RuleTester({ parserOptions });
+const ruleTester = new RuleTester({
+  parserOptions,
+  settings: { react: { version: '18' } },
+});
 const ruleDefiner = getRuleDefiner(ruleTester);
 ruleDefiner.defineRule('react/jsx-uses-react', require('../../../lib/rules/jsx-uses-react'));
 
@@ -49,7 +53,7 @@ ruleTester.run('no-unused-vars', rule, {
     },
     {
       code: '/*eslint react/jsx-uses-react:1*/ var Frag; <></>;',
-      settings: { react: { fragment: 'Frag' } },
+      settings: { react: { fragment: 'Frag', version: '18' } },
       features: ['fragment'],
     },
     {
@@ -58,6 +62,17 @@ ruleTester.run('no-unused-vars', rule, {
     },
   ].map(parsers.disableNewTS)),
   invalid: parsers.all([
+    {
+      code: '/*eslint react/jsx-uses-react:1*/ var React; <div />;',
+      settings: { react: { version: '19.0.0' } },
+      errors: [{
+        message: '\'React\' is defined but never used.',
+        suggestions: [{
+          messageId: 'removeVar',
+          output: '/*eslint react/jsx-uses-react:1*/  <div />;',
+        }],
+      }],
+    },
     {
       code: '/*eslint react/jsx-uses-react:1*/ var React;',
       errors: [{
@@ -99,7 +114,7 @@ ruleTester.run('no-unused-vars', rule, {
         }],
       }],
       features: ['fragment'],
-      settings: { react: { fragment: 'Fragment' } },
+      settings: { react: { fragment: 'Fragment', version: '18' } },
     },
     {
       code: '/*eslint react/jsx-uses-react:1*/ var React; <></>;',

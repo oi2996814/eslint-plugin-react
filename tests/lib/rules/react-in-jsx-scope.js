@@ -25,6 +25,7 @@ const parserOptions = {
 const settings = {
   react: {
     pragma: 'Foo',
+    version: '18',
   },
 };
 
@@ -32,7 +33,10 @@ const settings = {
 // Tests
 // -----------------------------------------------------------------------------
 
-const ruleTester = new RuleTester({ parserOptions });
+const ruleTester = new RuleTester({
+  parserOptions,
+  settings: { react: { version: '18' } },
+});
 ruleTester.run('react-in-jsx-scope', rule, {
   valid: parsers.all([
     { code: 'var React, App; <App />;' },
@@ -62,6 +66,23 @@ ruleTester.run('react-in-jsx-scope', rule, {
     {
       code: 'var Foo, App; <App />;',
       settings,
+    },
+    {
+      code: 'var App, a = <App />;',
+      settings: { react: { version: '19.0.0' } },
+    },
+    {
+      code: 'var a = <App />;',
+      settings: { react: { version: '19.0.0' } },
+    },
+    {
+      code: 'var a = <img />;',
+      settings: { react: { version: '19.0.0' } },
+    },
+    {
+      code: 'var a = <>fragment</>;',
+      features: ['fragment'],
+      settings: { react: { version: '19.0.0' } },
     },
   ]),
   invalid: parsers.all([
