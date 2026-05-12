@@ -92,6 +92,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: strip eslint-doc-generator to avoid peer conflicts
+        if: ${{ matrix.typescript-eslint >= 6 }}
+        run: echo "$(jq 'del(.devDependencies["eslint-doc-generator"])' package.json)" > package.json
       - uses: ljharb/actions/node/install@main
         name: 'nvm install ${{ matrix.node-version }} && npm install'
         with:
